@@ -1,0 +1,91 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: data_world_cup
+    env_file:
+      - path: .env
+        required: true
+    environment: 
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/postgres-sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - data_world_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+minio:
+  image: minio/mini:latest
+  container_name: data_world_minio
+  command: server /data --console-address ":9001"
+  env_file:
+    - path: .env
+      required: true
+  environment: 
+    MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+    MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+  ports: 
+    - "9000:9000"
+    - "9001:9001"
+  volumes: 
+    - minio_data:&data
+  networks:
+    - data_world_network
+  healthcheck:
+    test: ["CMD", "mc", "ready", "local"]
+    interval: 10s
+    timeout: 5s
+    retries: 3
+
+minio-init:
+  image: minio/mc:latest
+  container_name: data_world_minio_init
+  depends_on:
+    minio:
+      condition: service-healthy
+  entrypoint: >
+    /bin/sh -c "
+      sleep 5 &&
+      mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+      mc mb local/$${MINIO_BUCKET} 2>/dev/null || true &&
+      mc mb local/raw 2>/dev/null || true &&
+      mc mb local/processed 2>/dev/null || true &&
+      mc mb local/images 2>/dev/null || true &&
+      exit 0;
+      "
+  networks:
+    - data_world_network
+
+nginx:
+  build:
+    context: ./nginx
+    dockerfile: Dockerfile
+  container_name: data_world_nginx
+  ports:
+    - "8080:80"
+  networks:
+    - data_world_network
+  healthcheck:
+    test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost/nginx-health || exit 1"]
+    interval: 15s
+    timeout: 5s
+    retries: 3
+    start_period: 10s
+
+networks:
+  data_world_network:
+    driver: bridge
+
+
+volumes:
+    postgres_data:
+    minio_data:
