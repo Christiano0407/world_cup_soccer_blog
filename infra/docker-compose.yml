@@ -52,18 +52,19 @@ services:
         condition: service-healthy
     env_file:
       - ../.env
-    entrypoint: >
-    /bin/sh -c "
-      sleep 5 &&
-      mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
-      mc mb local/$${MINIO_BUCKET} 2>/dev/null || true &&
-      mc mb local/raw 2>/dev/null || true &&
-      mc mb local/processed 2>/dev/null || true &&
-      mc mb local/images 2>/dev/null || true &&
-      exit 0;
-      "
-  networks:
-    - data_world_network
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        sleep 5 &&
+        mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+        mc mb local/$${MINIO_BUCKET} 2>/dev/null || true &&
+        mc mb local/raw 2>/dev/null || true &&
+        mc mb local/processed 2>/dev/null || true &&
+        mc mb local/images 2>/dev/null || true &&
+        exit 0;
+    networks:
+      - data_world_network
 
 nginx:
   build:
