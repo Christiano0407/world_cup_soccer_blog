@@ -46,7 +46,7 @@ dev = [
 ]
 
 [project.scripts]
-serve = "worker.main:start"
+fifa-worker = "worker.cli:main"
 fifa-analysis = "worker.analysis.runner:main"
 
 [dependency-groups]
