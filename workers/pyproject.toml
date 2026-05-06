@@ -89,7 +89,6 @@ build-backend = "hatchling.build"
 #
 # Run:
 #   uv run serve                            # dev (auto-reload)
-#   uv run uvicorn src.main:app --reload    # same, explicit
 #
 # Test:
 #   uv run pytest                           # all tests
