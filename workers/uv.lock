@@ -424,7 +424,7 @@ wheels = [
 ]
 
 [[package]]
-name = "fifa-backend"
+name = "fifa-workers"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
