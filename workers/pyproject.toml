@@ -1,5 +1,5 @@
 [project]
-name = "fifa-backend"
+name = "fifa-workers"
 version = "0.1.0"
 description = "FIFA World Cup Platform — FastAPI backend with OpenAPI contract"
 readme = "README.md"
@@ -46,12 +46,11 @@ dev = [
 ]
 
 [project.scripts]
-# Start dev server:  uv run serve
-# Start prod server: uv run serve --env prod
-serve = "src.main:start"
+serve = "worker.main:start"
+fifa-analysis = "worker.analysis.runner:main"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.1.0",
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=5.0.0",
