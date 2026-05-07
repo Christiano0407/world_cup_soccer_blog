@@ -115,11 +115,8 @@ class IngestResult:
     rows_inserted: int
     minio_key: str
 
-async def ingest_csv(
-        file_path: Path, 
-        dataset: DatasetKind, 
-        settings: Settings
-) -> IngestResult:
+
+async def ingest_csv(file_path: Path, dataset: DatasetKind, settings: Settings) -> IngestResult:
     """
     W1 main entrypoint.
       1. Read CSV with pandas (no type inference — all strings).
@@ -158,9 +155,7 @@ async def ingest_csv(
     try:
         async with conn.transaction():
             for _, row in df.iterrows():
-                values = [source_name] + [
-                    _clean_cell(row.get(col)) for col in config["columns"]
-                ]
+                values = [source_name] + [_clean_cell(row.get(col)) for col in config["columns"]]
                 await conn.execute(config["insert_sql"], *values)
                 inserted += 1
 
@@ -168,7 +163,7 @@ async def ingest_csv(
         await conn.close()
 
     log.info("w1.complete", dataset=dataset, inserted=inserted, sha256=sha256[:12])
- 
+
     return IngestResult(
         dataset=dataset,
         source_file=source_name,
