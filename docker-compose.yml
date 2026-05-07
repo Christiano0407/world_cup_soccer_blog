@@ -92,7 +92,7 @@ services:
         condition: service_healthy
     networks:
         - data_world_network
-    command: ["uv", "run", "fifa-worker", "--all"]
+    command: ["uv", "run", "fifa-worker", "--ingest"]
 
   nginx:
     build:
