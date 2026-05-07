@@ -112,9 +112,20 @@ class IngestResult:
     _upload_to_minio(settings,raw_bytes, minio_key, source_name)
     log.info("w1.minio_upload", key=minio_key)
 
-    # ── Step 2: Read CSV — all columns as str to preserve raw ─
+    # ── Step 2: Read CSV — all columns as str to preserve raw | Pandas ─
+    df = pd.read_csv(
+        io.BytesIO(raw_bytes),
+        dtype=str,           # no inference — W2 handles casting
+        keep_default_na=False,
+        encoding="utf-8",
+    )
+    rows_read = len(df)
+    log.info("w1.csv_read", rows=rows_read, cols=list[df.columns])
 
     # Normalize column names: lowercase + strip spaces
+    df.columns = [c.lower().strip().replace(" ", "_") for c in df.columns]
+
+    config = DATASET_CONFIG[dataset]
 
     # ── Step 3: Insert into raw staging (parameterized) ───────
 
