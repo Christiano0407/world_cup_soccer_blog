@@ -181,7 +181,7 @@ async def ingest_csv(
 
 def _upload_to_minio(settings: Settings, data: bytes, key: str, filename: str) -> None:
     client = get_minio_client(settings)
-    bucket = settings.minio_bucket_raw
+    bucket = settings.minio_raw_bucket
     if not client.bucket_exists(bucket):
         client.make_bucket(bucket)
     client.put_object(
