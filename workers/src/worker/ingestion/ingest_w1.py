@@ -156,3 +156,10 @@ def _upload_to_minio(settings: Settings, data: bytes, key: str, filename: str) -
       content_type="text/csv",
       metadata={"x-source-file": filename},
     )
+
+def _clean_cell(value: object) -> str | None:
+    """Normalize empty strings to None. Never cast types."""
+    if value is None:
+       return None
+    s = str(value).strip()
+    return None if s == "" else s
