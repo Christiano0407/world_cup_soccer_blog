@@ -128,6 +128,19 @@ class IngestResult:
     config = DATASET_CONFIG[dataset]
 
     # ── Step 3: Insert into raw staging (parameterized) ───────
+    conn = asyncpg.Connection = await asyncpg.connect(settings.postgres_dsn)
+    inserted = 0
+    try: 
+       async with conn.transaction():
+          for _, row in df.iterrows():
+             values = [source_name] + [ 
+                _clean_cell(row.get(col)) for col in config["columns"]
+             ]
+             await conn.execute(config["insert_sql"], *values)
+             inserted += 1
+
+    finally: 
+       await conn.close()
 
 
 def _upload_to_minio(settings: Settings, data: bytes, key: str, filename: str) -> None:
