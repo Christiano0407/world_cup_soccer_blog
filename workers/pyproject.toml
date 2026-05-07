@@ -10,6 +10,8 @@ dependencies = [
     # Web framework
     "fastapi>=0.111.0",
     "uvicorn[standard]>=0.29.0",   # ASGI server (with uvloop + httptools)
+    "minio>=7.2.0",
+    "pandas>=2.2.0",
 
     # Database (async)
     "asyncpg>=0.29.0",             # async PostgreSQL driver
@@ -64,8 +66,7 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "UP", "S", "B", "ANN"]
-ignore = ["ANN101", "ANN102"]   
+select = ["E", "F", "I", "N", "UP", "S", "B", "ANN"] 
 
 [tool.mypy]
 python_version = "3.12"

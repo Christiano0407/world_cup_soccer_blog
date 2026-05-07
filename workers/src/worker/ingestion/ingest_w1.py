@@ -17,9 +17,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+import structlog
 import asyncpg
 import pandas as pd
-import structlog
 
 from worker.core.config import Settings
 from worker.core.storage import get_minio_client
@@ -79,7 +79,7 @@ DATASET_CONFIG: dict[DatasetKind, dict] = {
             "win_conditions", "attendance", "ht_home_goals", "ht_away_goals", 
             "referee", "assistant_1", "assistant_2", "round_id", "match_id", 
             "home_team_initials", "away_team_initials",
-          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8 $9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)   
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)   
     """,
     },
     "players": {
@@ -142,7 +142,7 @@ async def ingest_csv(file_path: Path, dataset: DatasetKind, settings: Settings) 
         encoding="utf-8",
     )
     rows_read = len(df)
-    log.info("w1.csv_read", rows=rows_read, cols=list[df.columns])
+    log.info("w1.csv_read", rows=rows_read, cols=list(df.columns))
 
     # Normalize column names: lowercase + strip spaces
     df.columns = [c.lower().strip().replace(" ", "_") for c in df.columns]
@@ -150,7 +150,7 @@ async def ingest_csv(file_path: Path, dataset: DatasetKind, settings: Settings) 
     config = DATASET_CONFIG[dataset]
 
     # ── Step 3: Insert into raw staging (parameterized) ───────
-    conn = asyncpg.Connection = await asyncpg.connect(settings.postgres_dsn)
+    conn = await asyncpg.connect(settings.postgres_dsn)
     inserted = 0
     try:
         async with conn.transaction():
@@ -175,8 +175,8 @@ async def ingest_csv(file_path: Path, dataset: DatasetKind, settings: Settings) 
 
 
 def _upload_to_minio(settings: Settings, data: bytes, key: str, filename: str) -> None:
-    client = get_minio_client(settings)
-    bucket = settings.minio_raw_bucket
+    client = get_minio_client()
+    bucket = settings.minio_bucket_raw
     if not client.bucket_exists(bucket):
         client.make_bucket(bucket)
     client.put_object(
