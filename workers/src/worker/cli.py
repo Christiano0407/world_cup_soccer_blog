@@ -6,7 +6,22 @@ import sys
 
 def run_ingest() -> None:
     """W1: Extract + upload to MinIO raw."""
-    print("W1: Ingest pipeline — not yet implemented")
+    import asyncio
+    from pathlib import Path
+
+    from worker.core.config import settings
+    from worker.ingestion.ingest_w1 import ingest_csv
+
+    source = Path(settings.csv_source_path)
+    datasets = ["winners", "matches", "players"]
+
+    async def _run() -> None:
+        for ds in datasets:
+            files = list(source.glob(f"{ds}*.csv"))
+            for f in files:
+                await ingest_csv(f, ds, settings)
+
+    asyncio.run(_run())
 
 
 def run_clean() -> None:

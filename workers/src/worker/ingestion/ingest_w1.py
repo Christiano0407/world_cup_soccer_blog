@@ -17,9 +17,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-import structlog
 import asyncpg
 import pandas as pd
+import structlog
 
 from worker.core.config import Settings
 from worker.core.storage import get_minio_client
@@ -60,6 +60,9 @@ DATASET_CONFIG: dict[DatasetKind, dict] = {
             "stadium",
             "city",
             "home_team_name",
+            "home_team_goals",
+            "away_team_goals",
+            "away_team_name",
             "win_conditions",
             "attendance",
             "ht_home_goals",
@@ -131,7 +134,7 @@ async def ingest_csv(file_path: Path, dataset: DatasetKind, settings: Settings) 
     source_name = file_path.name
 
     # ---- Step 1: Upload raw CSV to MiniO ---- #
-    minio_key = f"raw{dataset}{source_name}"
+    minio_key = f"raw/{dataset}/{source_name}"
     _upload_to_minio(settings, raw_bytes, minio_key, source_name)
     log.info("w1.minio_upload", key=minio_key)
 
