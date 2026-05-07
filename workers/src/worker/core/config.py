@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     minio_bucket_parquet: str = "parquet"
 
     # Ingestion
-    csv_source_path: str = "./data"
+    csv_source_path: str = "./data_raw"
 
     class Config:
         env_file = ".env"
