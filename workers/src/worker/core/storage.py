@@ -1,6 +1,7 @@
 """MinIO client wrapper for raw and parquet storage."""
 
 from minio import Minio
+
 from worker.core.config import settings
 
 

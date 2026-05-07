@@ -1,8 +1,8 @@
 """Async PostgreSQL connection pool factory."""
 
 import asyncpg
-from worker.core.config import settings
 
+from worker.core.config import settings
 
 _pool: asyncpg.Pool | None = None
 
