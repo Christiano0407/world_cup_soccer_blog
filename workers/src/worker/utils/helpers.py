@@ -18,13 +18,32 @@ def parse_bool(value:str | None ) -> bool | None:
     return True
   if normalized in { "FALSE", "0", "NO", "N" }: 
     return False
-  
   return None
 
 # === Convierte string a Decimal. Maneja comas como separador decimal. Retorna None si el valor es vacío o inválido. === #  # noqa: E501 === #
+def parse_decimal(value:str | None, *, field: str = "") -> Decimal | None:
+  """ 
+    - Convierte string a Decimal. Maneja comas como separador decimal. Retorna None si el valor es vacío o inválido.
+  """  # noqa: E501
+  if value is None or str(value).strip() == "":
+    return None
+  cleaned = str(value).strip().replace(",", ".")
+  try:
+    return Decimal(cleaned)
+  except InvalidOperation:
+    return None
+
 
 
 # === Convierte string a int. Retorna None si inválido. === #
+def parse_int(value:str | None) -> int | None:
+  """Convierte string a int. Retorna None si inválido"""
+  if value is None or str(value).strip() == "":
+    return None
+  try: 
+    return int(str(value).strip())
+  except ValueError:
+    return None
 
 # === Intenta parsear fecha en múltiples formatos comunes. Retorna None si no puede parsear. === #
 
