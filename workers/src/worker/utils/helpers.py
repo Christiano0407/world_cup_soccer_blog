@@ -94,6 +94,34 @@ def parse_date(value:str | None) -> date | None:
       continue
   return None
 
+def parse_datetime_csv(value:str | None) -> datetime | None:
+   """
+    Parser específico para el campo datetime del CSV de matches FIFA.
+ 
+    Formato exacto del CSV: "13 Jul 1930 - 15:00 "  (con espacios extra)
+    También maneja variantes menores del mismo formato.
+ 
+    Retorna datetime naive (sin timezone) — el loader aplica UTC al insertar.
+    Retorna None si no puede parsear.
+  """
+   if value is None or str(value).strip() == "":
+     return None
+   clean_dt = str(value).strip()
+   # Formato principal del CSV: "13 Jul 1930 - 15:00"
+   formats = [
+        "%d %b %Y - %H:%M",   # "13 Jul 1930 - 15:00"  ← formato del CSV
+        "%d %b %Y - %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+        "%d/%m/%Y %H:%M",
+    ]
+   for fmt in formats:
+     try:
+       return datetime.strptime(clean_dt, fmt)
+     except ValueError:
+       continue
+   return None
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # NORMALIZADORES DE TEXTO
