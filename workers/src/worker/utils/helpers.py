@@ -46,12 +46,40 @@ def parse_int(value:str | None) -> int | None:
     return None
 
 # === Intenta parsear fecha en múltiples formatos comunes. Retorna None si no puede parsear. === #
+def parse_date(value:str | None) -> date | None:
+  """Intenta parsear fecha en múltiples formatos comunes. Retorna None si no puede parsear"""
+  if value is None or str(value).strip() == "":
+    return None
+  format = ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"]
+  clean = str(value).strip()
+  for fmt in format:
+    try:
+        return datetime.strptime(clean, fmt).date()
+    except ValueError:
+      continue
+  return None
 
 
-# === Normaliza SKU: strip + uppercase. Retorna None si vacío. === #
-
+# === Normaliza SKU (Valor único): strip + uppercase. Retorna None si vacío. === #
+def normalize_unique_sku(value: str | None) -> str | None: 
+ """Normaliza SKU (Valor único): strip + uppercase. Retorna None si vacío."""
+ if value is None: 
+   return None
+ result = str(value).strip().upper()
+ return result or None
+ 
 
 # === Strip de espacios. Opcionalmente trunca al max_length. === #
+def normalize_text(value:str | None, *, max_length: int | None = None) -> str | None:
+  """Strip de espacios. Opcionalmente trunca al max_length."""
+  if value is None:
+    return None
+  result = str(value).strip()
+  if not result:
+    return None
+  if max_length is not None:
+    result = result[:max_length]
+  return result
 
 
 # === Genera un slug URL-friendly a partir de un texto. === #
