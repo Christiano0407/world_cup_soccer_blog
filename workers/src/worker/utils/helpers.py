@@ -7,3 +7,38 @@ workers/utils/helpers.py
 import re 
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
+
+# === Convierte strings comunes de booleano a bool. Retorna None si ambiguo. ===
+def parse_bool(value:str | None ) -> bool | None: 
+  """Convierte strings comunes de booleano a bool. Retorna None si ambiguo."""
+  if value is None:
+    return None
+  normalized = str(value).strip().upper()
+  if normalized in { "TRUE", "1", "YES", "SI", "S", "Y" }: 
+    return True
+  if normalized in { "FALSE", "0", "NO", "N" }: 
+    return False
+  
+  return None
+
+# === Convierte string a Decimal. Maneja comas como separador decimal. Retorna None si el valor es vacío o inválido. === #  # noqa: E501 === #
+
+
+# === Convierte string a int. Retorna None si inválido. === #
+
+# === Intenta parsear fecha en múltiples formatos comunes. Retorna None si no puede parsear. === #
+
+
+# === Normaliza SKU: strip + uppercase. Retorna None si vacío. === #
+
+
+# === Strip de espacios. Opcionalmente trunca al max_length. === #
+
+
+# === Genera un slug URL-friendly a partir de un texto. === #
+
+
+# === Retorna el momento actual en UTC (timezone-aware). === #
+
+
+# === Genera una clave S3 con timestamp para evitar colisiones. Ejemplo: products/20240115_143022_productos.csv === #  # noqa: E501 === #
