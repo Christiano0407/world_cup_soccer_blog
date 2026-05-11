@@ -123,7 +123,6 @@ AUDIT_SCHEMA:str = "audit"
 # ─────────────────────────────────────────────────────────────────────────────
 ## ---- Iniciales de equipo: 2-3 letras mayúsculas
 TEAM_INITIALS_PATTERN: str = r"^[A-Z]{2,3}$"
-
 ## ---- Formato datetime del CSV de matches: "13 Jul 1930 - 15:00"
 CSV_DATETIME_PATTERN:str = r"^\d{1,2}\s+[A-Za-z]{3}\s+\d{4}\s+\d{2}:\d{2}"
 ## ---- SKU genérico (heredado, por si se reutiliza)
@@ -162,7 +161,18 @@ MAX_SHIRT_NUMBER: int = 99
 # ─────────────────────────────────────────────────────────────────────────────
 # CONFIGURACIÓN DEL PIPELINE
 # ─────────────────────────────────────────────────────────────────────────────
-# ── Audit ─────────────────────────────────────────────────────
+#### ──- Audit ─────────────────────────────────────────────────────
 AUDIT_SCHEMA: str = "audit"
 RAW_SCHEMA: str = "raw"
 WAREHOUSE_SCHEMA: str = "warehouse"
+
+#### ---- Tamaño de batch para inserts en raw.* (W1)
+ETL_BATCH_SIZE: int = 500
+ 
+#### ---- Tiempo máximo de espera para conexión a DB (segundos)
+DB_CONNECT_TIMEOUT: int = 30
+ 
+#### ---- Prefijos en MinIO
+MINIO_RAW_PREFIX: str       = "raw"
+MINIO_PROCESSED_PREFIX: str = "processed"
+MINIO_PARQUET_PREFIX: str   = "parquet"
