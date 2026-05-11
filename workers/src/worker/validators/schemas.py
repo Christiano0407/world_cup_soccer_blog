@@ -3,6 +3,23 @@ workers/pipeline/validators/schemas.py
   - Pydantic v2 models para validar cada fila del CSV.
   - RawProductRow  → datos tal como llegan del CSV (todo strings)
   - CleanProductRow → datos después de validación y casteo
+======================================
+Pydantic v2 models para los 3 datasets FIFA World Cup.
+ 
+ARQUITECTURA DE SCHEMAS — dos capas por dataset:
+ 
+  Raw{Dataset}Row   → datos tal como llegan del CSV (todo str | None)
+                       W1 los produce, W2 los lee para validar.
+                       Pydantic NO castea — solo mapea columnas a campos.
+ 
+  Clean{Dataset}Row → datos después de validación y casteo a tipos reales.
+                       W2 los produce, W3 los consume para insertar en public.*.
+                       - Todos los campos tienen tipos Python correctos.
+ 
+Datasets:
+  - Winners  → wc_winners.csv  → public.tournaments
+  - Matches  → wc_matches.csv  → public.matches
+  - Players  → wc_players.csv  → public.match_players
 """
 
 from __future__ import annotations
