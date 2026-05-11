@@ -244,3 +244,17 @@ def format_s3_key(prefix:str, filename: str, *, ts:datetime | None = None) -> st
   ts = ts or now_utc()
   timestamp = ts.strftime("%Y%m%d_%H%M%S")
   return f"{prefix}/{timestamp}_{filename}"
+
+
+def clean_cell(value: object) -> str | None:
+  """
+    Normaliza una celda del CSV a str o None.
+    - Convierte vacíos, espacios y "nan" a None.
+    - Usado en W1 antes de insertar en raw.*.
+  """
+  if value is None:
+    return None
+  result_s = str(value).strip()
+  if result_s.lower() in {"", "nan", "none", "null", "n/a", "na"}:
+    return None
+  return result_s
