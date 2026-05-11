@@ -187,12 +187,34 @@ def normalized_event_football_players_code(value:str | None) -> str | None:
       SY    → tarjeta amarilla suspendida
       P     → penalti fallado
  
-    Retorna None si vacío o espacio en blanco. 
+    - Retorna None si vacío o espacio en blanco. 
   """
   if value is None:
     return None
   result_player = str(value).strip().upper()
   return result_player
+
+def normalized_lineup_type(value:str | None) -> str | None:
+  """
+    Normaliza tipo de alineación.
+    "S" = Starter (titular), "N" = Non-starter (suplente).
+    - Retorna None si no es S o N.
+  """
+  if value is None:
+    return None
+  result_lineup = str(value).strip().upper()
+  return result_lineup if result_lineup in { "S", "N" } else None
+
+def normalize_player_position(value:str | None) -> str | None:
+  """
+    - Normaliza posición de jugador.
+    - Válidas: GK, DF, MF, FW.
+    - Retorna None si vacío o no reconocido.
+  """
+  if value is None:
+    return None
+  result_position_player = str(value).strip().upper()
+  return result_position_player if result_position_player in {"GK", "DF", "MF", "FW"} else None 
 
 
 # ─────────────────────────────────────────────────────────────────────────────
