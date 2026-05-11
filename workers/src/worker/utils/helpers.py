@@ -148,6 +148,52 @@ def normalize_text(value:str | None, *, max_length: int | None = None) -> str | 
     result = result[:max_length]
   return result
 
+def normalize_team_names(value: str | None) -> str | None:
+  """
+   Normaliza nombre de selección: strip + Correct title.
+    "  germany fr  " → "Germany Fr"
+    - Retorna None si vacío.
+  """
+  if value is None:
+    return None
+  result = str(value).strip().title()
+  return result or None
+
+def normalize_initials(value:str | None) -> str | None:
+  """
+     Normaliza iniciales de equipo: strip + uppercase.
+    "fra " → "FRA"
+    - Validar que sea 2-3 caracteres alfanuméricos.
+  """ 
+  if value is None:
+    return None
+  result = str(value).strip().upper()
+  if not result or len(result) > 3:
+    return None
+  return result
+
+def normalized_event_football_players_code(value:str | None) -> str | None:
+  """"
+  Normaliza códigos de evento del CSV de players FIFA.
+ 
+    Eventos observados en el dataset:
+      G     → gol normal
+      G40   → gol en tiempo añadido de primer tiempo
+      G45+1 → gol al 45+1
+      OG    → gol en propia puerta (own goal)
+      Y     → tarjeta amarilla
+      Y2R   → segunda amarilla = roja
+      R     → tarjeta roja directa
+      SY    → tarjeta amarilla suspendida
+      P     → penalti fallado
+ 
+    Retorna None si vacío o espacio en blanco. 
+  """
+  if value is None:
+    return None
+  result_player = str(value).strip().upper()
+  return result_player
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GENERADORES Y UTILIDADES
