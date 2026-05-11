@@ -150,14 +150,57 @@ class RawMatchesRow(BaseModel):
       Referee, Assistant 1, Assistant 2, RoundID, MatchID,
       Home Team Initials, Away Team Initials
   """
-  pass
+  model_config = {
+    "str_strip_whitespace": True
+  }
+  year: str | None = None
+  datetime: str | None = None
+  stage: str | None = None
+  stadium: str | None = None
+  city: str | None = None
+  home_team_name: str | None = None
+  home_team_goals: str | None = None
+  away_team_name: str | None = None
+  away_team_goals: str | None = None
+  win_conditions: str | None = None
+  attendance: str | None = None
+  ht_home_goals: str | None = None
+  ht_away_goals: str | None = None
+  referee: str | None = None
+  assistant_1: str | None = None
+  assistant_2: str | None = None
+  round_id: str | None = None
+  match_id: str | None = None
+  home_team_initials: str | None = None
+  away_team_initials: str | None = None
 
 
 class CleanMatchesRow(BaseModel):
   """
     Matches row con tipos reales (Ya tipadas / Types de db), lista para insertar en public.matches.
+      - Datos ya tipados (types / ORM) para DB & Storage s3
   """
-  pass
+
+  match_id: Annotated[int, Field(ge=1)]
+  round_id: Annotated[int, Field(ge=1)]
+  year: Annotated[int, Field(ge=MIN_WC_YEAR, le=MAX_WC_YEAR)]
+  match_datetime: str | None = None
+  stage: str 
+  stadium: str | None = None
+  city: str | None = None
+  home_team_name: str | None = None
+  home_goals: Annotated[int, Field(ge=0)]
+  away_team_name: str | None = None
+  away_goals: Annotated[int, Field(ge=0)]
+  win_conditions: str | None = None
+  attendance: Annotated[int, Field(ge=0, le=MAX_ATTENDANCE_PER_MATCH)] | None = None
+  ht_home_goals: str | None = None
+  ht_away_goals: str | None = None
+  referee: str | None = None
+  assistant_1: str | None = None
+  assistant_2: str | None = None
+  home_team_initials: str 
+  away_team_initials: str 
 
 # ═════════════════════════════════════════════════════════════════════════════
 # PLAYERS — wc_players.csv → public.match_players
