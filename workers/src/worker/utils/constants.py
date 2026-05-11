@@ -134,9 +134,29 @@ DIMENSIONS_PATTERN: str = r"^\d+(\.\d+)?[xX]\d+(\.\d+)?[xX]\d+(\.\d+)?$"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # VALORES VÁLIDOS DEL DOMINIO — extraídos del CSV
-# ─────────────────────────────────────────────────────────────────────────────
 # ── Patrones de validación ────────────────────────────────────
-
+# ─────────────────────────────────────────────────────────────────────────────
+### ---- Posiciones válidas en el CSV de players
+VALID_POSITIONS: frozenset[str] = frozenset({"GK", "DF", "MF", "FW"})
+ 
+### ---- Tipos de alineación válidos
+VALID_LINEUP_TYPES: frozenset[str] = frozenset({"S", "N"})
+ 
+### ---- Eventos válidos — prefijos (ej: "G40", "G45+1" también son válidos)
+VALID_EVENT_PREFIXES: tuple[str, ...] = ("G", "OG", "Y", "R", "SY", "P")
+ 
+### ---- Rango de años válidos del Mundial FIFA
+MIN_WC_YEAR: int = 1930
+MAX_WC_YEAR: int = 2030
+ 
+### ---- Límite razonable de goles por torneo
+MAX_GOALS_PER_TOURNAMENT: int = 200
+ 
+### ---- Límite razonable de asistencia por partido
+MAX_ATTENDANCE_PER_MATCH: int = 200_000
+ 
+### ---- Shirt numbers válidos (0 = sin asignar en el CSV)
+MAX_SHIRT_NUMBER: int = 99
 
 
 # ─────────────────────────────────────────────────────────────────────────────
