@@ -20,7 +20,13 @@ Bugs corregidos vs versión anterior:
   - players insert_sql: trailing comma eliminada (rompía PostgreSQL)
 """
 
+from __future__ import annotations
+
 from typing import Literal
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIPOS: Data Base (data sets)
+# ─────────────────────────────────────────────────────────────────────────────
 
 DatasetKind = Literal["winners", "matches", "players"]  # - Tables / SQL - postgres | Data Raw -
 

@@ -5,7 +5,9 @@ workers/pipeline/validators/schemas.py
   - CleanProductRow → datos después de validación y casteo
 ======================================
 Pydantic v2 models para los 3 datasets FIFA World Cup.
- 
+- Pydantic [Type | Tipar los datos e validar]
+- Pydantic, para los ORM - SQLSchemy (Ba) | Prisma en (Fr)
+
 ARQUITECTURA DE SCHEMAS — dos capas por dataset:
  
   Raw{Dataset}Row   → datos tal como llegan del CSV (todo str | None)
@@ -27,54 +29,106 @@ from __future__ import annotations
 import re
 from datetime import date 
 from decimal import Decimal
+
 from typing import Annotated
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from worker.core.config import Settings
-from worker.utils.constants import DatasetKind, DATASET_CONFIG
 from worker.utils.helpers import (
-  normalize_unique_sku,
-  normalize_text,
   parse_bool,
   parse_decimal, 
   parse_date, 
-  parse_int
+  parse_int, 
+  parse_datetime_csv,
+  normalize_unique_sku,
+  normalize_text,
+  normalized_event_football_players_code, 
+  normalize_initials, 
+  normalized_lineup_type, 
+  normalize_player_position,
+  normalize_team_names
+  
+)
+from worker.utils.constants import (
+  MAX_ATTENDANCE_PER_MATCH, 
+  MAX_GOALS_PER_TOURNAMENT, 
+  MAX_SHIRT_NUMBER,
+  MAX_WC_YEAR, 
+  MIN_WC_YEAR, 
+  TEAM_INITIALS_PATTERN, 
+  VALID_EVENT_PREFIXES,
+  VALID_LINEUP_TYPES,
+  VALID_POSITIONS
 )
 
 
 ## === Tipado con Pydantic (py) ===
-class WinnersRow(BaseModel): 
+# ═════════════════════════════════════════════════════════════════════════════
+# WINNERS — wc_winners.csv → public.tournaments
+# ═════════════════════════════════════════════════════════════════════════════
+
+class RawWinnersRow(BaseModel): 
   """ 
     Schema de Winners Data Row: todo campo es str | None porque viene de un CSV.
     Pydantic NO intenta castear — solo mapea columnas a campos.
+    #=============================#
+    CSV row tal como llega del archivo wc_winners.csv.
+    - Todo es str | None — sin casteo, sin validación de tipos.
+    - W1 inserta en raw.wc_winners, W2 lee estas filas para validar.
+ 
+    Columnas del CSV:
+    - Year, Country, Winner, Runners-Up, Third, Fourth,
+    - GoalsScored, QualifiedTeams, MatchesPlayed, Attendance
   """
-  pass
+  model_config = {"str_strip_whitespace": True}
 
-
-class TournamentsRow(BaseModel): 
-  """ 
-    Schema de Winners Data Row: todo campo es str | None porque viene de un CSV.
-    Pydantic NO intenta castear — solo mapea columnas a campos.
-  """
-  tournament_id: str | None = None
-  year: Annotated[int, Field(ge=1920, le=2018)]
-  host_country: str | None = None
+  year: str | None = None
+  country: str | None = None          # país anfitrión
   winner: str | None = None
-  runners_up: str | None 
-  third_place: str | None
-  fourth_place: str | None
-  goals_scored: Annotated[int, Field(ge=0)]
-  qualified_teams: Annotated[int, Field(ge=0)]
-  matches_played: int | None
-  attendance_total: int | None
+  runners_up: str | None = None
+  third: str | None = None
+  fourth: str | None = None
+  goals_scored: str | None = None
+  qualified_teams: str | None = None
+  matches_played: str | None = None
+  attendance: str | None = None       # "590.549" — punto = miles en CSV
 
-  
+
+class CleanWinnersRow(BaseModel): 
+  """
+    - Winners row después de validación y casteo a tipos reales [type | Tipo de Dato].
+    - W2 produce este modelo, W3 lo usa para upsert en public.tournaments.
+  """
+
+  year: Annotated[int, Field(ge=MIN_WC_YEAR, le=MAX_WC_YEAR)]
+  host_country: str | None = None
+  winner: str
+  runners_up: str 
+  third_place: str | None = None
+  fourth_place: str | None = None
+  goals_scored: Annotated[int, Field(ge=0, le=MAX_GOALS_PER_TOURNAMENT)]
+  qualified_teams: Annotated[int, Field(ge=1, le=48)]
+  matches_played: Annotated[int, Field(ge=1)]
+  attendance_total: int | None = None
+
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# MATCHES — wc_matches.csv → public.matches
+# ═════════════════════════════════════════════════════════════════════════════
+   
 class Matches(BaseModel): 
   """ 
     Schema de matches Data Row: todo campo es str | None porque viene de un CSV.
     Pydantic NO intenta castear — solo mapea columnas a campos.
   """
   pass
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PLAYERS — wc_players.csv → public.match_players
+# ═════════════════════════════════════════════════════════════════════════════
 
 class Players(BaseModel): 
   """ 
