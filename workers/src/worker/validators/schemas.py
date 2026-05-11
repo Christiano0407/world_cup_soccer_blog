@@ -112,27 +112,74 @@ class CleanWinnersRow(BaseModel):
   matches_played: Annotated[int, Field(ge=1)]
   attendance_total: int | None = None
 
+  @field_validator("winner", "runners_up", "host_country")
+  @classmethod
+  def not_empty(cls, v:str) -> str:
+    if not v or not v.strip():
+      raise ValueError("No puede estar Vacío")
+    return v.strip()
+  
+  @model_validator(mode="after")
+  def goals_coherent_with_match(self) -> CleanWinnersRow:
+    """Los goles promedio deben ser >= 0.5 por partido (sanity check)."""
+    avg = self.goals_scored / self.matches_played
+    if avg < 0.5:
+      raise ValueError(
+        f"avg goals / match={avg:.2f} - parece correcto el número de goles & partidos"
+        f"( num de goles: {self.goals_scored} goles en Num de Part: {self.matches_played} partido)"
+      )
+    return self
+
 
 
 # ═════════════════════════════════════════════════════════════════════════════
 # MATCHES — wc_matches.csv → public.matches
 # ═════════════════════════════════════════════════════════════════════════════
    
-class Matches(BaseModel): 
+class RawMatchesRow(BaseModel): 
   """ 
-    Schema de matches Data Row: todo campo es str | None porque viene de un CSV.
-    Pydantic NO intenta castear — solo mapea columnas a campos.
+    - Schema de matches Data Row: todo campo es str | None porque viene de un CSV.
+    - Pydantic NO intenta castear — solo mapea columnas a campos.
+    # ======================================= #
+    CSV row tal como llega de wc_matches.csv. Todo str | None.
+ 
+    Columnas del CSV:
+      Year, Datetime, Stage, Stadium, City,
+      Home Team Name, Home Team Goals, Away Team Goals, Away Team Name,
+      Win conditions, Attendance, Half-time Home Goals, Half-time Away Goals,
+      Referee, Assistant 1, Assistant 2, RoundID, MatchID,
+      Home Team Initials, Away Team Initials
   """
   pass
 
+
+class CleanMatchesRow(BaseModel):
+  """
+    Matches row con tipos reales (Ya tipadas / Types de db), lista para insertar en public.matches.
+  """
+  pass
 
 # ═════════════════════════════════════════════════════════════════════════════
 # PLAYERS — wc_players.csv → public.match_players
 # ═════════════════════════════════════════════════════════════════════════════
 
-class Players(BaseModel): 
+class RawPlayersRow(BaseModel): 
   """ 
     Schema de players Data Row: todo campo es str | None porque viene de un CSV.
     Pydantic NO intenta castear — solo mapea columnas a campos.
+    ### =============================
+    CSV row tal como llega de wc_players.csv. Todo str | None.
+ 
+    - Columnas del CSV:
+    - RoundID, MatchID, Team Initials, Coach Name, Line-up,
+    - Shirt Number, Player Name, Position, Event
+  """
+  pass
+
+
+class CleanPlayersRow(BaseModel):
+  """
+    Players row con tipos reales, lista para insertar en public.match_players.
+      - Ya tipado (Tipos de datos / type)
   """
   pass
