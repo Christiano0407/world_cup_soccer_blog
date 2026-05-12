@@ -231,6 +231,13 @@ class CleanMatchesRow(BaseModel):
         f"ht_away_goals={self.ht_away_goals} (Goles al medio tiempo) > home_goals={self.away_goals} (goles totales  ´x´ partido)"  # noqa: E501
       )
     return self
+  
+  @model_validator(mode="after")
+  def ht_both_goals_or_none(self) -> CleanMatchesRow:
+     """Los goles de HT(Halftime/medio tiempo) son ambos None (No hay goles) o ambos int (Ya hicieron goles) — nunca uno solo."""  # noqa: E501
+     if (self.ht_home_goals is None) != (self.ht_away_goals is None):
+       raise ValueError("HT(Halftime/medio tiempo) son ambos None (No hay goles) o ambos int (Ya hicieron goles) — nunca uno solo.")  # noqa: E501
+     return self
 
 
 # ═════════════════════════════════════════════════════════════════════════════
