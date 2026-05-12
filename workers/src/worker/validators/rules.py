@@ -140,8 +140,51 @@ def _valid(
 
 # ─────────────────────────────────────────────────────────────────────────────
 # REGLAS DE NEGOCIO: WINNERS
-# Fuente: wc_winners.csv → valida antes de cargar en public.tournaments
+# Fuente: wc_winners.csv [Dataset] → valida antes de cargar en public.tournaments [DB & Storage]
 # ─────────────────────────────────────────────────────────────────────────────
+def validate_winners_row(
+    raw: RawWinnersRow,
+    raw_row_id: int | None = None
+) -> ValidationResult:
+  """
+    - Valida y castea una fila de wc_winners.csv.
+    - Retorna ValidationResult con CleanWinnersRow si es válida.
+  """
+  errors : list[ValidationError] = []
+
+  # ---- year ---- #
+  year = parse_int(raw.year)
+  if year is None:
+    errors.append(_err("year", "MISSING_YEAR", F"'year', vacío o no parceable: '{raw.year}'"))
+  elif not (MIN_WC_YEAR <= year <= MAX_WC_YEAR): 
+     errors.append(_err("year", "INVALID_YEAR_RANGE (1930 - 2030)",
+                           f"year={year} fuera del rango [{MIN_WC_YEAR}, {MAX_WC_YEAR}]"))
+     
+  # ---- host_country ---- #
+  host_country = normalize_text(raw.country, max_length=100)
+  if not host_country:
+    errors.append(_err("country", "MISSING_HOST_WINNER", "No tenemos campeón / No existe información de quién fué el País Campeón del Mundo de ese año"))  # noqa: E501
+
+  # ---- winners ---- #
+
+  # ---- runners_up ---- #
+
+  # ---- third & fourth place (opecionales - warning si ambos están vacíos) ---- #
+
+  # ---- goals_scored ---- #
+
+  # ---- qualified_teams ---- #
+
+  # ── matches_played ─────────────────────────────────────────────
+
+  # ── attendance (opcional — punto como separador de miles) ──────
+
+  # ── Regla de negocio: avg goals coherente ─────────────────────
+
+  # ── Si hay errores graves → rechazar ──────────────────────────
+
+  # ── Construir fila limpia ──────────────────────────────────────
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

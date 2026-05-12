@@ -105,8 +105,8 @@ class CleanWinnersRow(BaseModel):
   host_country: str | None = None
   winner: str
   runners_up: str 
-  third_place: str | None = None
-  fourth_place: str | None = None
+  third: str | None = None
+  fourth: str | None = None
   goals_scored: Annotated[int, Field(ge=0, le=MAX_GOALS_PER_TOURNAMENT)]
   qualified_teams: Annotated[int, Field(ge=1, le=48)]
   matches_played: Annotated[int, Field(ge=1)]
