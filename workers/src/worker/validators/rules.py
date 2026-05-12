@@ -67,7 +67,17 @@ from worker.utils.constants import (
 # ─────────────────────────────────────────────────────────────────────────────
 # ESTRUCTURAS DE RESULTADO
 # ─────────────────────────────────────────────────────────────────────────────
+@dataclass
+class ValidationError:
+  """ Validar que tenemos errores dentro de las Filas (Row), de nuestras DB - CSV (Dataset)"""
+  field: str              # nombre del campo que falló
+  code: str               # código de error — usado en dead_letter._error_code
+  message: str            # descripción legible — va a dead_letter._error_detail
+  severity: str = "error" # "error" (rechaza la fila) | "warning" (log pero continúa)
 
+  def __str__(self) -> str:
+    return f"[{self.severity.upper()} | {self.field}: {self.code} - {self.message}]"
+ 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS INTERNOS DE VALIDACIÓN
