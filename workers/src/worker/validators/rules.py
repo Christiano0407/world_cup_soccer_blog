@@ -166,10 +166,23 @@ def validate_winners_row(
     errors.append(_err("country", "MISSING_HOST_WINNER", "No tenemos campeón / No existe información de quién fué el País Campeón del Mundo de ese año"))  # noqa: E501
 
   # ---- winners ---- #
+  winners = normalize_text(raw.winner, max_length=100)
+  if not winners:
+    errors.append(_err("country", "MISSING_WINNER", "No tenemos ganador - campeón"))  # noqa: E501
 
   # ---- runners_up ---- #
+  runners_up = normalize_text(raw.runners_up, max_length=100)
+  if not runners_up:
+    errors.append(_err("runners_up", "MISSING_RUNNERS_UP", "Subcampeón Vacío"))
 
   # ---- third & fourth place (opecionales - warning si ambos están vacíos) ---- #
+  third = normalize_text(raw.third, max_length=100)
+  fourth = normalize_text(raw.fourth, max_length=100)
+
+  if not third and not fourth:
+    errors.append(
+      _warn("third/fourth", "MISSING_PODIUM", "Podium Incompleto: No tenemos ni tercer ni cuarto lugar.")  # noqa: E501
+    )
 
   # ---- goals_scored ---- #
 
