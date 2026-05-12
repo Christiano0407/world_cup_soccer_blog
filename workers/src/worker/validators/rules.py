@@ -92,7 +92,7 @@ class ValidationResult:
         raw_row_id: ID de la fila en raw.* (para el dead_letter)
   """
   is_valid: bool
-  clean_code: CleanWinnersRow | CleanMatchesRow | CleanPlayersRow | None
+  clean_row: CleanWinnersRow | CleanMatchesRow | CleanPlayersRow | None
   errors: list[ValidationError] = field(default_factory=list)
   raw_row_id: int | None = None
 
@@ -114,9 +114,29 @@ class ValidationResult:
     return " | ".join(str(e) for e in self.errors)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# HELPERS INTERNOS DE VALIDACIÓN
+# HELPERS INTERNOS DE VALIDACIÓN (_)
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _err(field: str, code: str, message: str) -> ValidationError:
+  return ValidationError(field=field, code=code, message=message, severity="error")
+
+def _warn(field: str, code: str, message: str) -> ValidationError:
+  return ValidationError(field=field, code=code, message=message, severity="warning")
+
+def _invalid(errors: list[ValidationError], raw_row_id: int | None = None) -> ValidationResult:
+  return ValidationResult(is_valid=False, clean_row=None, errors=errors, raw_row_id=raw_row_id)
+
+def _valid(
+    clean_row: CleanWinnersRow | CleanMatchesRow | CleanPlayersRow,
+    warnings: list[ValidationError] | None = None,
+    raw_row_id: int | None = None
+) -> ValidationResult:
+    return ValidationResult(
+          is_valid=True,
+          clean_row=clean_row, 
+          errors=warnings or [],
+          raw_row_id=raw_row_id,
+    )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # REGLAS DE NEGOCIO: WINNERS
