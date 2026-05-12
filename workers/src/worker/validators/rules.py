@@ -79,6 +79,40 @@ class ValidationError:
     return f"[{self.severity.upper()} | {self.field}: {self.code} - {self.message}]"
  
 
+@dataclass
+class ValidationResult: 
+  """  
+  Resultado de validar una fila del CSV [Dataset] 
+    - Coincidan las filas con los datos & Tipados de datos.
+ 
+    Attributes:
+        is_valid:   True si la fila puede cargarse en public.* (sin errores graves)
+        clean_row:  La fila con tipos reales (solo si is_valid=True)
+        errors:     Lista de errores y warnings encontrados
+        raw_row_id: ID de la fila en raw.* (para el dead_letter)
+  """
+  is_valid: bool
+  clean_code: CleanWinnersRow | CleanMatchesRow | CleanPlayersRow | None
+  errors: list[ValidationError] = field(default_factory=list)
+  raw_row_id: int | None = None
+
+  @property
+  def has_warning(self) -> bool:
+    return any(e.severity == "warning" for e in self.errors)
+  
+  @property
+  def error_code(self) -> list[str]:
+    return [e.code for e in self.errors if e.severity == "error"]
+  
+  @property
+  def first_error_code(self) -> str | None:
+    codes = self.error_code
+    return codes[0] if codes else None
+  
+  @property
+  def error_detail(self) -> str: 
+    return " | ".join(str(e) for e in self.errors)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS INTERNOS DE VALIDACIÓN
 # ─────────────────────────────────────────────────────────────────────────────
