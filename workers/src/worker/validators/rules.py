@@ -9,6 +9,7 @@ Reglas de negocio reutilizables, separadas del schema Pydantic.
  
 RESPONSABILIDAD: Validar que los datos tienen sentido en el contexto
 del negocio FIFA — más allá de que tengan el tipo correcto.
+  - Datos de mis DB - Storage s3 | Datasets
  
 ARQUITECTURA:
   - ValidationError  → un error individual con campo + mensaje + severidad
