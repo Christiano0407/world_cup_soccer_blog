@@ -255,7 +255,19 @@ class RawPlayersRow(BaseModel):
     - RoundID, MatchID, Team Initials, Coach Name, Line-up,
     - Shirt Number, Player Name, Position, Event
   """
-  pass
+  model_config = {
+    "str_strip_whitespace": True
+  }
+
+  round_id: str | None = None
+  match_id: str | None = None
+  team_initials: str | None = None
+  coach_name: str | None = None
+  line_up: str | None = None        # 'S' (Start) & 'N' (Non-started)
+  shirt_number: str | None = None   # "0" (Sin asignar en el CSV)
+  player_name: str | None = None
+  position: str | None = None       # "GK", "DF", "MF", "FW"
+  event: str | None = None          # G, G40, Y, R, OG, SY...
 
 
 class CleanPlayersRow(BaseModel):
@@ -263,4 +275,69 @@ class CleanPlayersRow(BaseModel):
     Players row con tipos reales, lista para insertar en public.match_players.
       - Ya tipado (Tipos de datos / type)
   """
-  pass
+  round_id: Annotated[int, Field(ge=1)]
+  match_id: Annotated[int, Field(ge=1)]
+  team_initials: str
+  coach_name: str | None = None
+  line_up: str                      # 'S' (Start) & 'N' (Non-started)
+  shirt_number: Annotated[int, Field(ge=1, le=MAX_SHIRT_NUMBER)] | None = None   # "0" (Sin asignar en el CSV)  # noqa: E501
+  player_name: str
+  position: str | None = None       # "GK", "DF", "MF", "FW"
+  event_code: str | None = None          # G, G40, Y, R, OG, SY...
+
+
+  @field_validator("team_initials")
+  @classmethod
+  def validate_initials(cls, v:str) -> str:
+    """ Validar las iniciales del Team (Selección) en Mayúsculas"""
+    val_initials = normalize_initials(v)
+    if val_initials is None:
+      raise ValueError(f"Iniciales Inválidas: '{v}' - Mayúsculas")
+    return val_initials
+  
+  @field_validator("line_up")
+  @classmethod
+  def validate_init_line_up(cls, v:str) -> str:
+    """ Validar si inician el juego o no ['S' o 'N']"""
+    val_line_up = normalized_lineup_type(v)
+    if val_line_up is None:
+      raise ValueError(f"Line_up type Invalid (Tipo de Alineación es Inválida): '{v}'. Debe ser: 'S' or 'N'.")  # noqa: E501
+    return val_line_up
+  
+  @field_validator("position")
+  @classmethod
+  def validate_position_player(cls, v:str | None) -> str | None:
+    """ Validamos posición de cada jugar (saber de qué juegan)"""
+    val_position = normalize_player_position(v)
+    if v is None: 
+      return None
+    return val_position
+  
+  @field_validator("player_name")
+  @classmethod
+  def player_name_not_empty(cls, v:str) -> str:
+    """ Validar que el Nombre (Name), existe dentro del torneo | No está vacío o 'falso nombre' """
+    if not v or not v.strip():
+      raise ValueError("player_name (Nombre del jugador), no puede estar vacío")
+    return v.strip()
+  
+  @field_validator("event_code")
+  @classmethod
+  def valid_event_player_game(cls, v:str | None) -> str | None:
+    """ Validar los Eventos (tarjetas, goles...etc)"""
+    if v is None: 
+      return None
+    valid_event_code = normalized_event_football_players_code(v)
+    if valid_event_code is None: 
+      return None
+    # Validar por 'prefijo': G, G40, Y, R, OG, SY, etc...
+    if not any (valid_event_code.startswith(p) for p in VALID_EVENT_PREFIXES):
+      return valid_event_code
+    return valid_event_code
+  
+
+  @model_validator(mode="after")
+  def shirt_zero_to_none(self) -> CleanPlayersRow:
+      """El CSV usa shirt_number=0 para 'sin asignar' → convertir a None."""
+      # Este caso se maneja en W2 antes de crear el schema
+      return self
