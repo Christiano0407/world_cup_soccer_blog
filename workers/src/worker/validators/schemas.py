@@ -154,7 +154,7 @@ class RawMatchesRow(BaseModel):
     "str_strip_whitespace": True
   }
   year: str | None = None
-  datetime: str | None = None
+  datetime: str | None = None  # "13 Jul 1930 - 15:00 "
   stage: str | None = None
   stadium: str | None = None
   city: str | None = None
@@ -162,9 +162,9 @@ class RawMatchesRow(BaseModel):
   home_team_goals: str | None = None
   away_team_name: str | None = None
   away_team_goals: str | None = None
-  win_conditions: str | None = None
+  win_conditions: str | None = None  # vacío = tiempo normal
   attendance: str | None = None
-  ht_home_goals: str | None = None
+  ht_home_goals: str | None = None # half-time
   ht_away_goals: str | None = None
   referee: str | None = None
   assistant_1: str | None = None
@@ -194,13 +194,44 @@ class CleanMatchesRow(BaseModel):
   away_goals: Annotated[int, Field(ge=0)]
   win_conditions: str | None = None
   attendance: Annotated[int, Field(ge=0, le=MAX_ATTENDANCE_PER_MATCH)] | None = None
-  ht_home_goals: str | None = None
-  ht_away_goals: str | None = None
+  ht_home_goals: Annotated[int, Field(ge=0)] | None = None   # half-time
+  ht_away_goals: Annotated[int, Field(ge=0)] | None = None
   referee: str | None = None
   assistant_1: str | None = None
   assistant_2: str | None = None
   home_team_initials: str 
   away_team_initials: str 
+
+  @field_validator("home_team_validator", "away_team_validator")
+  @classmethod
+  def validator_initials(cls, v:str) -> str:
+    val_initials = v.strip().upper()
+    if not re.match(TEAM_INITIALS_PATTERN, val_initials):
+      raise ValueError(f"Iniciales Inválidas:'{val_initials}' - debe de ser entre 2-3 letras Mayúsculas (BRA).")  # noqa: E501
+    return v
+  
+  @model_validator(mode="after")
+  def team_different(self) -> CleanMatchesRow:
+    """Un equipo no puede jugar contra sí mismo."""
+    if self.home_team_initials == self.away_team_initials:
+      raise ValueError(
+        f"Lo siento. 'home' & 'Away', no pueden ser el mismo equipo. {self.home_team_initials}"
+      )
+    return self
+  
+  @model_validator(mode="after")
+  def halftime_goals_not_ft(self) -> CleanMatchesRow:
+    """Los goles al HT(halftime/medio tiempo) no pueden superar los goles totales."""
+    if self.ht_home_goals is not None and self.ht_home_goals > self.home_goals: 
+      raise ValueError(
+        f"ht_home_goals={self.ht_home_goals} (Goles al medio tiempo) > home_goals={self.home_goals} (goles totales  ´x´ partido)"  # noqa: E501
+      )
+    if self.ht_away_goals is not None and self.ht_away_goals > self.away_goals: 
+      raise ValueError(
+        f"ht_away_goals={self.ht_away_goals} (Goles al medio tiempo) > home_goals={self.away_goals} (goles totales  ´x´ partido)"  # noqa: E501
+      )
+    return self
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # PLAYERS — wc_players.csv → public.match_players
