@@ -213,6 +213,14 @@ def validate_winners_row(
     errors.append(_warn("attendance", "UNPARSEABLE_ATTENDANCE", F"Attendance no parseable: {raw.attendance} - se guardará como NULL"))  # noqa: E501
 
   # ── Regla de negocio: avg goals coherente ─────────────────────
+  # [Notaciones Verificadas por Partido (avg)] #
+  if goals is not None and matches is not None and matches < 0: 
+      avg = goals / matches 
+      if avg < 0.3:
+        errors.append(_warn("goals_scored", "LOG_AVG_MATCHES", f"avg={avg:.2f} goles/partidos - parece bajo (nivel de anotaciones. Verificar)"))  # noqa: E501
+      if avg > 8.0:
+        errors.append(_warn("goals_scored", "HIGH_SCORED_GOALS", F"avg={avg:.2f} goles/partidos - parece alto el nivel de anotaciones. Verificar"))  # noqa: E501
+
 
   # ── Si hay errores graves → rechazar ──────────────────────────
 
