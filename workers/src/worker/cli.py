@@ -36,9 +36,12 @@ def run_load() -> None:
 
 def run_analysis() -> None:
     """Run all analysis workers."""
-    from worker.analysis.runner import main as run_analysis
+    try:
+        from worker.analysis.runner import main as run_analysis
 
-    run_analysis()
+        run_analysis()
+    except ImportError:
+        print("W4: Analysis pipeline — not yet implemented")
 
 
 def main() -> None:

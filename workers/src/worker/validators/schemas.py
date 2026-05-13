@@ -125,8 +125,8 @@ class CleanWinnersRow(BaseModel):
     avg = self.goals_scored / self.matches_played
     if avg < 0.5:
       raise ValueError(
-        f"avg goals / match={avg:.2f} - parece correcto el número de goles & partidos"
-        f"( num de goles: {self.goals_scored} goles en Num de Part: {self.matches_played} partido)"
+        f"avg={avg:.2f} goles/partido — parece anormalmente bajo"
+        f" ({self.goals_scored} goles en {self.matches_played} partidos)"
       )
     return self
 
@@ -202,13 +202,13 @@ class CleanMatchesRow(BaseModel):
   home_team_initials: str 
   away_team_initials: str 
 
-  @field_validator("home_team_validator", "away_team_validator")
+  @field_validator("home_team_initials", "away_team_initials")
   @classmethod
   def validator_initials(cls, v:str) -> str:
     val_initials = v.strip().upper()
     if not re.match(TEAM_INITIALS_PATTERN, val_initials):
       raise ValueError(f"Iniciales Inválidas:'{val_initials}' - debe de ser entre 2-3 letras Mayúsculas (BRA).")  # noqa: E501
-    return v
+    return val_initials
   
   @model_validator(mode="after")
   def team_different(self) -> CleanMatchesRow:
@@ -325,14 +325,14 @@ class CleanPlayersRow(BaseModel):
   @classmethod
   def valid_event_player_game(cls, v:str | None) -> str | None:
     """ Validar los Eventos (tarjetas, goles...etc)"""
-    if v is None: 
+    if v is None:
       return None
     valid_event_code = normalized_event_football_players_code(v)
-    if valid_event_code is None: 
+    if valid_event_code is None:
       return None
     # Validar por 'prefijo': G, G40, Y, R, OG, SY, etc...
-    if not any (valid_event_code.startswith(p) for p in VALID_EVENT_PREFIXES):
-      return valid_event_code
+    if not any(valid_event_code.startswith(p) for p in VALID_EVENT_PREFIXES):
+      return None
     return valid_event_code
   
 

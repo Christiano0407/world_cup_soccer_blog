@@ -94,6 +94,66 @@
 
 ---
 
+## Libraries & Frameworks
+
+### Web & ASGI
+| Library | Version | Purpose |
+|---------|---------|---------|
+| `fastapi` | ≥ 0.111 | REST API framework with OpenAPI auto-docs |
+| `uvicorn[standard]` | ≥ 0.29 | ASGI server (uvloop + httptools) |
+
+### Database & Storage
+| Library | Version | Purpose |
+|---------|---------|---------|
+| `asyncpg` | ≥ 0.29 | Async PostgreSQL driver (connection pool + parameterized queries) |
+| `sqlalchemy[asyncio]` | ≥ 2.0 | Async ORM with async engine support |
+| `alembic` | ≥ 1.13 | Database migrations (DDL versioning) |
+| `minio` | ≥ 7.2 | S3-compatible client for MinIO object storage |
+
+### Pipeline & Data Processing
+| Library | Version | Purpose |
+|---------|---------|---------|
+| `pandas` | ≥ 2.2 | CSV reading, data frames, dtype-preserving ingestion |
+| `structlog` | ≥ 24.1 | Structured JSON logging with context binding |
+| pydantic v2 | ≥ 2.6 | Dual-layer schemas (`Raw*Row` / `Clean*Row`) for validation |
+| `pydantic-settings` | ≥ 2.2 | Type-safe environment variable loading |
+
+### Authentication & Security
+| Library | Version | Purpose |
+|---------|---------|---------|
+| `python-jose[cryptography]` | ≥ 3.3 | JWT token creation & verification |
+| `passlib[argon2]` | ≥ 1.7 | Argon2id password hashing (OWASP recommended) |
+| `python-multipart` | ≥ 0.0.9 | Form data parsing (login endpoints) |
+
+### Observability & Rate Limiting
+| Library | Version | Purpose |
+|---------|---------|---------|
+| `prometheus-fastapi-instrumentator` | ≥ 6.1 | Prometheus metrics for FastAPI |
+| `slowapi` | ≥ 0.1.9 | Rate limiting (DDoS protection) |
+| `structlog` | ≥ 24.1 | Request/response structured logging |
+
+### Developer Tooling
+| Tool | Version | Purpose |
+|------|---------|---------|
+| `uv` | ≥ 0.6 | Python package & project manager (fast pip alternative) |
+| `ruff` | ≥ 0.4 | Linter + formatter (100× faster than flake8) |
+| `mypy` | ≥ 1.9 | Static type checking (strict mode + pydantic plugin) |
+| `pytest` | ≥ 8.1 | Test runner with async support |
+| `pytest-asyncio` | ≥ 0.23 | Async test fixture support |
+| `pytest-cov` | ≥ 5.0 | Coverage reports |
+| `httpx` | ≥ 0.27 | Async HTTP test client for FastAPI |
+| `factory-boy` | ≥ 3.3 | Test data factories |
+
+### Infrastructure
+| Tool | Purpose |
+|------|---------|
+| **Docker Compose** | Multi-container orchestration (PostgreSQL, MinIO, workers, nginx) |
+| **nginx** | Reverse proxy with rate limiting (api-gateway.conf) |
+| **PostgreSQL 15** | Relational database with `raw`, `public`, `audit`, `warehouse` schemas |
+| **MinIO** | S3-compatible object storage for raw CSVs + Parquet exports |
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -160,6 +220,105 @@ uv run mypy src/
 
 # Run tests
 uv run pytest -v
+```
+
+---
+
+## Detailed Setup Guide
+
+### 1. Clone & Environment
+
+```bash
+git clone <repo-url> && cd world_cup_soccer_blog
+cp .env.example .env
+```
+
+Edit `.env` with your credentials:
+
+```env
+# PostgreSQL
+POSTGRES_USER=champion07
+POSTGRES_PASSWORD=<your_secure_password>
+POSTGRES_DB=data-world-cup
+
+# MinIO
+MINIO_ROOT_USER=admin
+MINIO_ROOT_PASSWORD=<your_minio_password>
+S3_ENDPOINT=http://minio:9000
+S3_ACCESS_KEY=admin
+S3_SECRET_KEY=<your_minio_password>
+```
+
+### 2. Initialize Database Schema
+
+The PostgreSQL container auto-executes `db/postgres-sql/init.sql` on first boot.
+This creates the 4 schemas and all staging tables:
+
+```bash
+docker compose up -d postgres minio
+```
+
+Verify with:
+
+```bash
+docker compose exec postgres psql -U champion07 -d data-world-cup -c "\dn"
+#   List of schemas
+#   ──────────────
+#    raw
+#    public
+#    audit
+#    warehouse
+```
+
+### 3. Run ETL Pipeline
+
+```bash
+# Stage 1 — Ingest (CSV → MinIO → raw.*)
+docker compose run --rm worker uv run fifa-worker --ingest
+
+# Stage 2 — Clean (validate & cast)
+docker compose run --rm worker uv run fifa-worker --clean
+
+# Stage 3 — Load (transform → public.* → Parquet)
+docker compose run --rm worker uv run fifa-worker --load
+
+# Full pipeline (W1 → W2 → W3 → Analysis)
+docker compose run --rm worker uv run fifa-worker --all
+```
+
+### 4. Access Services
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| **Swagger UI** | `http://localhost:8000/docs` | — |
+| **ReDoc** | `http://localhost:8000/redoc` | — |
+| **MinIO Console** | `http://localhost:9001` | `admin` / `<your_password>` |
+| **MinIO API** | `http://localhost:9000` | `admin` / `<your_password>` |
+| **PostgreSQL** | `localhost:5434` | `champion07` / `<your_password>` |
+| **nginx** | `http://localhost:8080` | — |
+
+### 5. Verify Data
+
+```bash
+# Check raw staging tables
+docker compose exec postgres psql -U champion07 -d data-world-cup -c \
+  "SELECT COUNT(*) FROM raw.wc_winners;"
+
+# Check MinIO objects
+docker compose exec minio mc ls local/raw/
+```
+
+### 6. Worker CLI Reference
+
+```bash
+docker compose run --rm worker --help
+
+# Options:
+#   --ingest     W1 — Extract CSV → MinIO → raw.*
+#   --clean      W2 — Validate & cast → dead_letter
+#   --load       W3 — Transform → public.* → Parquet
+#   --analysis   W4 — Generate analytics charts
+#   --all        Full pipeline (W1 → W2 → W3 → W4)
 ```
 
 ---

@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import hashlib
 import io
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
 import asyncpg
 import pandas as pd
@@ -23,91 +23,22 @@ import structlog
 
 from worker.core.config import Settings
 from worker.core.storage import get_minio_client
+from worker.utils.constants import DATASET_CONFIG, DatasetKind
+from worker.utils.helpers import clean_cell
 
 log = structlog.get_logger(__name__)  # History - Real Time -
 
-DatasetKind = Literal["winners", "matches", "players"]  # - Tables / SQL - postgres -
+# Datasets sin header row en el CSV — la primera línea son datos, no cabeceras
+_NO_HEADER_DATASETS: frozenset[str] = frozenset({"matches"})
 
-# = Maps dataset name → (csv columns in order, raw table name) =
-DATASET_CONFIG: dict[DatasetKind, dict] = {
-    "winners": {
-        "raw_table": "raw.wc_winners",
-        "columns": [
-            "year",
-            "country",
-            "winner",
-            "runners_up",
-            "third",
-            "fourth",
-            "goals_scored",
-            "qualified_teams",
-            "matches_played",
-            "attendance",
-        ],
-        "insert_sql": """
-        INSERT INTO raw.wc_winners (
-          _source_file, year, country, winner, runners_up, third,
-          fourth, goals_scored, qualified_teams, matches_played, attendance
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-    """,
-    },
-    "matches": {
-        "raw_tables": "raw.wc_matches",
-        "columns": [
-            "year",
-            "datetime",
-            "stage",
-            "stadium",
-            "city",
-            "home_team_name",
-            "home_team_goals",
-            "away_team_goals",
-            "away_team_name",
-            "win_conditions",
-            "attendance",
-            "ht_home_goals",
-            "ht_away_goals",
-            "referee",
-            "assistant_1",
-            "assistant_2",
-            "round_id",
-            "match_id",
-            "home_team_initials",
-            "away_team_initials",
-        ],
-        "insert_sql": """
-          INSERT INTO raw.wc_matches (
-            _source_file,
-                year, datetime, stage, stadium, city,
-                home_team_name, home_team_goals, away_team_goals, away_team_name,
-                win_conditions, attendance, ht_home_goals, ht_away_goals,
-                referee, assistant_1, assistant_2,
-                round_id, match_id, home_team_initials, away_team_initials
-          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)   
-    """,
-    },
-    "players": {
-        "raw_tables": "raw.wc_players",
-        "columns": [
-            "round_id",
-            "match_id",
-            "team_initials",
-            "coach_name",
-            "line_up",
-            "shirt_number",
-            "player_name",
-            "position",
-            "event",
-        ],
-        "insert_sql": """
-          INSERT INTO raw.wc_players (
-            _source_file,
-            round_id, match_id, team_initials, coach_name, line_up, 
-            shirt_number, player_name, position, event, 
-          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-      """,
-    },
-}
+
+def _normalize_column_name(name: str) -> str:
+    """Convierte nombres de columna CSV a snake_case compatible con DATASET_CONFIG."""
+    name = name.strip()
+    name = name.replace("-", "_")
+    name = re.sub(r"([a-z])([A-Z])", r"\1_\2", name)
+    name = re.sub(r"[^a-zA-Z0-9]+", "_", name)
+    return name.lower().strip("_")
 
 
 @dataclass
@@ -138,20 +69,31 @@ async def ingest_csv(file_path: Path, dataset: DatasetKind, settings: Settings) 
     _upload_to_minio(settings, raw_bytes, minio_key, source_name)
     log.info("w1.minio_upload", key=minio_key)
 
-    # ── Step 2: Read CSV — all columns as str to preserve raw | Pandas ─
-    df = pd.read_csv(
-        io.BytesIO(raw_bytes),
-        dtype=str,  # no inference — W2 handles casting
-        keep_default_na=False,
-        encoding="utf-8",
-    )
-    rows_read = len(df)
-    log.info("w1.csv_read", rows=rows_read, cols=list(df.columns))
-
-    # Normalize column names: lowercase + strip spaces
-    df.columns = [c.lower().strip().replace(" ", "_") for c in df.columns]
-
     config = DATASET_CONFIG[dataset]
+
+    # ── Step 2: Read CSV — all columns as str to preserve raw | Pandas ─
+    if dataset in _NO_HEADER_DATASETS:
+        # matches CSV no tiene header — datos empiezan en línea 1
+        df = pd.read_csv(
+            io.BytesIO(raw_bytes),
+            dtype=str,
+            header=None,
+            names=config["columns"],
+            keep_default_na=False,
+            encoding="utf-8",
+        )
+    else:
+        df = pd.read_csv(
+            io.BytesIO(raw_bytes),
+            dtype=str,  # no inference — W2 handles casting
+            keep_default_na=False,
+            encoding="utf-8",
+        )
+        # Normalize column names to snake_case matching config
+        df.columns = [_normalize_column_name(c) for c in df.columns]
+
+    rows_read = len(df)
+    log.info("w1.csv_read", dataset=dataset, rows=rows_read, cols=list(df.columns))
 
     # ── Step 3: Insert into raw staging (parameterized) ───────
     conn = await asyncpg.connect(settings.postgres_dsn)
@@ -159,7 +101,7 @@ async def ingest_csv(file_path: Path, dataset: DatasetKind, settings: Settings) 
     try:
         async with conn.transaction():
             for _, row in df.iterrows():
-                values = [source_name] + [_clean_cell(row.get(col)) for col in config["columns"]]
+                values = [source_name] + [clean_cell(row.get(col)) for col in config["columns"]]
                 await conn.execute(config["insert_sql"], *values)
                 inserted += 1
 
@@ -192,10 +134,3 @@ def _upload_to_minio(settings: Settings, data: bytes, key: str, filename: str) -
         metadata={"x-source-file": filename},
     )
 
-
-def _clean_cell(value: object) -> str | None:
-    """Normalize empty strings to None. Never cast types."""
-    if value is None:
-        return None
-    s = str(value).strip()
-    return None if s == "" else s

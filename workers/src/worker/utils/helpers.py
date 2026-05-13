@@ -65,12 +65,14 @@ def parse_attendance(value: str | None) -> int | None:
     - También maneja enteros normales: "4444" → 4444
     - Retorna None si vacío o no parseable.
     """
-  if value is None or str(value).strip() == "": 
+  if value is None or str(value).strip() == "":
     return None
-  cleaned = str(value).strip().replace(",", ".").replace(",", ".")
-  try: 
+  cleaned = str(value).strip()
+  # El CSV usa punto como separador de miles (notación europea): "590.549" → 590549
+  # También manejamos comas por si acaso: "590,549" → 590549
+  cleaned = cleaned.replace(".", "").replace(",", "")
+  try:
     result = int(cleaned)
-    # Sanity check: asistencia razonable (0 a 200.000 por partido)
     return result if result >= 0 else None
   except ValueError:
     return None

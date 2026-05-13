@@ -169,7 +169,7 @@ def validate_winners_row(
   # ---- winners ---- #
   winners = normalize_text(raw.winner, max_length=100)
   if not winners:
-    errors.append(_err("country", "MISSING_WINNER", "No tenemos ganador - campeón"))  # noqa: E501
+    errors.append(_err("winner", "MISSING_WINNER", "No tenemos ganador - campeón"))  # noqa: E501
 
   # ---- runners_up ---- #
   runners_up = normalize_text(raw.runners_up, max_length=100)
@@ -197,7 +197,7 @@ def validate_winners_row(
   if qualified is None:
     errors.append(_err("qualified_teams", "MISSING_QUALIFIED_TEAMS", f"Lo sentimos pero, éste equipo no está Clasificado al Mundial. Clasificados: {raw.qualified_teams}"))  # noqa: E501
   elif qualified < 1 or qualified > 48:
-    errors.append(_err("qualified_teams", "NEGATIVE_QUALIFIED_TEAMS", "No puede haber menor a 1 Selección o más de 48 Clasificadas para el Mundial: {qualified} 1 - 48"))  # noqa: E501
+    errors.append(_err("qualified_teams", "NEGATIVE_QUALIFIED_TEAMS", f"No puede haber menor a 1 Selección o más de 48 Clasificadas para el Mundial: {qualified} 1 - 48"))  # noqa: E501
 
   # ── matches_played ─────────────────────────────────────────────
   matches = parse_int(raw.matches_played)
@@ -214,7 +214,7 @@ def validate_winners_row(
 
   # ── Regla de negocio: avg goals coherente ─────────────────────
   # [Notaciones Verificadas por Partido (avg)] #
-  if goals is not None and matches is not None and matches < 0: 
+  if goals is not None and matches is not None and matches > 0: 
       avg = goals / matches 
       if avg < 0.3:
         errors.append(_warn("goals_scored", "LOG_AVG_MATCHES", f"avg={avg:.2f} goles/partidos - parece bajo (nivel de anotaciones. Verificar)"))  # noqa: E501
@@ -240,7 +240,7 @@ def validate_winners_row(
       matches_played=matches,         # type: ignore[arg-type]
       attendance_total=attendance,
   )
-  return _valid(clean, warnings=[e for e in errors if e.severity == "errors"], raw_row_id=raw_row_id)  # noqa: E501
+  return _valid(clean, warnings=[e for e in errors if e.severity == "warning"], raw_row_id=raw_row_id)  # noqa: E501
 
 
 # ─────────────────────────────────────────────────────────────────────────────
