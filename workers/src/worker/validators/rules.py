@@ -223,9 +223,24 @@ def validate_winners_row(
 
 
   # ── Si hay errores graves → rechazar ──────────────────────────
+  fatal = [e for e in errors if e.severity == "error"]
+  if fatal: 
+    return _invalid(errors, raw_row_id)
 
   # ── Construir fila limpia ──────────────────────────────────────
-
+  clean = CleanWinnersRow(
+      year=year,                      # type: ignore[arg-type]
+      host_country=host_country,      # type: ignore[arg-type]
+      winner=winners,                  # type: ignore[arg-type]
+      runners_up=runners_up,          # type: ignore[arg-type]
+      third=third,
+      fourth=fourth,
+      goals_scored=goals,             # type: ignore[arg-type]
+      qualified_teams=qualified,      # type: ignore[arg-type]
+      matches_played=matches,         # type: ignore[arg-type]
+      attendance_total=attendance,
+  )
+  return _valid(clean, warnings=[e for e in errors if e.severity == "errors"], raw_row_id=raw_row_id)  # noqa: E501
 
 
 # ─────────────────────────────────────────────────────────────────────────────
