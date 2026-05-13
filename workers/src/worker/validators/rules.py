@@ -41,6 +41,7 @@ from worker.utils.helpers import (
   parse_decimal, 
   parse_date, 
   parse_int, 
+  parse_attendance,
   parse_datetime_csv,
   normalize_unique_sku,
   normalize_text,
@@ -144,7 +145,7 @@ def _valid(
 # ─────────────────────────────────────────────────────────────────────────────
 def validate_winners_row(
     raw: RawWinnersRow,
-    raw_row_id: int | None = None
+    raw_row_id: int | None = None,
 ) -> ValidationResult:
   """
     - Valida y castea una fila de wc_winners.csv.
@@ -185,12 +186,31 @@ def validate_winners_row(
     )
 
   # ---- goals_scored ---- #
+  goals  = parse_int(raw.goals_scored)
+  if goals is None:
+    errors.append(_err("goals_scored", "EMPTY_GOALS_SCORED", f"No tiene goles anotados durante el torneo de fútbol mundial: {raw.goals_scored}"))  # noqa: E501
+  elif goals < 0:
+    errors.append(_err("goals_scored", "NEGATIVE_GOALS_SCORED", F"No puede tener goles negativos.Menor a cero (Don't have Negative Scored): goals_scored={goals} < 0"))  # noqa: E501
 
   # ---- qualified_teams ---- #
+  qualified = parse_int(raw.qualified_teams)
+  if qualified is None:
+    errors.append(_err("qualified_teams", "MISSING_QUALIFIED_TEAMS", f"Lo sentimos pero, éste equipo no está Clasificado al Mundial. Clasificados: {raw.qualified_teams}"))  # noqa: E501
+  elif qualified < 1 or qualified > 48:
+    errors.append(_err("qualified_teams", "NEGATIVE_QUALIFIED_TEAMS", "No puede haber menor a 1 Selección o más de 48 Clasificadas para el Mundial: {qualified} 1 - 48"))  # noqa: E501
 
   # ── matches_played ─────────────────────────────────────────────
+  matches = parse_int(raw.matches_played)
+  if matches is None:
+    errors.append(_err("matches_played", "MISSING_MATCHES_PLAYED", 
+      F"No Tenemos Registro de Partidos Jugados en el certamen mundialístico: {raw.matches_played}"))  # noqa: E501
+  elif matches < 1:
+    errors.append(_err("matches_played", "INVALID_MATCHES_PLAYED", F"No puede haber jugado ningún juego o 1. Se tienen que cumplir las reglas de el certamen mundialístico: {matches} - < 1 | 3 (fase de grupo)"))  # noqa: E501
 
   # ── attendance (opcional — punto como separador de miles) ──────
+  attendance = parse_attendance(raw.attendance)
+  if raw.attendance and attendance is None:
+    errors.append(_warn("attendance", "UNPARSEABLE_ATTENDANCE", F"Attendance no parseable: {raw.attendance} - se guardará como NULL"))  # noqa: E501
 
   # ── Regla de negocio: avg goals coherente ─────────────────────
 
