@@ -30,6 +30,8 @@ from typing import Any
 from worker.validators.schemas import (
   CleanMatchesRow, 
   CleanPlayersRow,
+  CleanRoundRow,
+  CleanTeamRow,
   CleanWinnersRow,
   RawMatchesRow, 
   RawPlayersRow, 
@@ -233,8 +235,8 @@ def validate_winners_row(
       host_country=host_country,      # type: ignore[arg-type]
       winner=winners,                  # type: ignore[arg-type]
       runners_up=runners_up,          # type: ignore[arg-type]
-      third=third,
-      fourth=fourth,
+      third_place=third,
+      fourth_place=fourth,
       goals_scored=goals,             # type: ignore[arg-type]
       qualified_teams=qualified,      # type: ignore[arg-type]
       matches_played=matches,         # type: ignore[arg-type]
@@ -253,3 +255,85 @@ def validate_winners_row(
 # REGLAS DE NEGOCIO: PLAYERS
 # Fuente: wc_players.csv → valida antes de cargar en public.match_players
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REGLAS DE NEGOCIO: TEAMS
+# Fuente: Extraídos de wc_matches.csv / wc_players.csv → public.teams
+# ─────────────────────────────────────────────────────────────────────────────
+
+def validate_team_row(
+    initials: str | None,
+    name: str | None = None,
+    confederation: str | None = None,
+    raw_row_id: int | None = None,
+) -> ValidationResult:
+    """
+    Valida y limpia una fila de equipo extraída de matches/players.
+    Los equipos se extraen como valores únicos de team_initials/home_team_initials/away_team_initials.
+    """
+    errors: list[ValidationError] = []
+
+    validated_initials = normalize_initials(initials)
+    if not validated_initials:
+        errors.append(_err("initials", "MISSING_TEAM_INITIALS",
+                           f"Iniciales de equipo vacías o inválidas: '{initials}'"))
+
+    validated_name = normalize_text(name, max_length=100)
+
+    validated_confederation = normalize_text(confederation, max_length=20)
+
+    fatal = [e for e in errors if e.severity == "error"]
+    if fatal:
+        return _invalid(errors, raw_row_id)
+
+    clean = CleanTeamRow(
+        initials=validated_initials,
+        name=validated_name,
+        confederation=validated_confederation,
+    )
+    return _valid(clean, warnings=errors, raw_row_id=raw_row_id)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REGLAS DE NEGOCIO: ROUNDS
+# Fuente: Extraídos de wc_matches.csv → public.rounds
+# ─────────────────────────────────────────────────────────────────────────────
+
+def validate_round_row(
+    round_id: str | None,
+    tournament_id: str | None,
+    round_name: str | None,
+    raw_row_id: int | None = None,
+) -> ValidationResult:
+    """
+    Valida y limpia una fila de ronda extraída de matches.
+    Las rondas se extraen como pares únicos (RoundID, Year → tournament_id, Stage → round_name).
+    """
+    errors: list[ValidationError] = []
+
+    parsed_round_id = parse_int(round_id)
+    if parsed_round_id is None or parsed_round_id < 1:
+        errors.append(_err("round_id", "INVALID_ROUND_ID",
+                           f"RoundID inválido: '{round_id}'"))
+
+    parsed_tournament_id = parse_int(tournament_id)
+    if parsed_tournament_id is None or parsed_tournament_id < 1:
+        errors.append(_err("tournament_id", "INVALID_TOURNAMENT_ID",
+                           f"TournamentID inválido: '{tournament_id}'"))
+
+    validated_round_name = normalize_text(round_name, max_length=60)
+    if not validated_round_name:
+        errors.append(_err("round_name", "MISSING_ROUND_NAME",
+                           "Nombre de ronda vacío"))
+
+    fatal = [e for e in errors if e.severity == "error"]
+    if fatal:
+        return _invalid(errors, raw_row_id)
+
+    clean = CleanRoundRow(
+        round_id=parsed_round_id,
+        tournament_id=parsed_tournament_id,
+        round_name=validated_round_name,
+    )
+    return _valid(clean, warnings=errors, raw_row_id=raw_row_id)

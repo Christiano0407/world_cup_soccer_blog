@@ -11,7 +11,8 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - ./db/postgres-sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db/scripts/run_migrations.sh:/docker-entrypoint-initdb.d/run_migrations.sh:ro
+      - ./db/migrations:/migrations:ro
       - postgres_data:/var/lib/postgresql/data
     networks:
       - data_world_network
@@ -61,6 +62,7 @@ services:
         mc mb local/$${MINIO_BUCKET} 2>/dev/null || true &&
         mc mb local/raw 2>/dev/null || true &&
         mc mb local/processed 2>/dev/null || true &&
+        mc mb local/parquet 2>/dev/null || true &&
         mc mb local/images 2>/dev/null || true &&
         exit 0;
     networks:
@@ -84,7 +86,7 @@ services:
       MINIO_SECURE: "false"
       CSV_SOURCE_PATH: /raw
     volumes:
-      - ./data_raw:/raw:ro
+      - ./data:/raw:ro
     depends_on:
       postgres:
         condition: service_healthy

@@ -67,7 +67,17 @@
 │   ├── postgres-sql/         # Init & DDL
 │   └── dml/                  # Sample data
 │
-├── data_raw/                  # Source CSV files
+├── data/                       # Source CSV files + processed outputs
+│   ├── raw/                   # Original CSVs sin tocar
+│   ├── processed/             # W2 escribe datos limpios aquí
+│   └── samples/               # Versiones pequeñas para tests
+├── db/                         # PostgreSQL — migraciones + scripts
+│   ├── migrations/             # DDL numerado y ordenado
+│   │   ├── 000_extensions.sql
+│   │   ├── 001_raw_staging.sql
+│   │   └── 002_public_tables.sql
+│   └── scripts/
+│       └── run_migrations.sh   # Orquestador de migraciones
 ├── infra/                     # nginx, monitoring
 ├── tests/                     # Integration tests
 │
@@ -251,8 +261,8 @@ S3_SECRET_KEY=<your_minio_password>
 
 ### 2. Initialize Database Schema
 
-The PostgreSQL container auto-executes `db/postgres-sql/init.sql` on first boot.
-This creates the 4 schemas and all staging tables:
+The PostgreSQL container auto-executes `db/scripts/run_migrations.sh` on first boot.
+This runs all migration files in order — creating schemas, staging tables, and production tables:
 
 ```bash
 docker compose up -d postgres minio
@@ -304,7 +314,11 @@ docker compose run --rm worker uv run fifa-worker --all
 docker compose exec postgres psql -U champion07 -d data-world-cup -c \
   "SELECT COUNT(*) FROM raw.wc_winners;"
 
-# Check MinIO objects
+# Check production tables
+docker compose exec postgres psql -U champion07 -d data-world-cup -c \
+  "\dt public.*"
+
+# Check MinIO objects (buckets: raw, processed, parquet, images)
 docker compose exec minio mc ls local/raw/
 ```
 
@@ -328,10 +342,10 @@ docker compose run --rm worker --help
 The worker CLI (`fifa-worker`) orchestrates a 4-stage ETL pipeline:
 
 | Stage | Flag | Module | Description |
-|---|---|---|---|
+|---|---|---|---|---|
 | **W1 — Ingest** | `--ingest` | `ingestion/ingest_w1.py` | Read CSV → upload to MinIO (raw/) → insert into `raw.*` staging tables |
-| **W2 — Clean** | `--clean` | `cleaning/` | Validate types & constraints → dead letter queue |
-| **W3 — Load** | `--load` | `loading/` | Transform & upsert into `public.*` → export Parquet to MinIO |
+| **W2 — Clean** | `--clean` | `cleaning/clean_w2.py` | Validate types & constraints → dead letter queue + write `data/processed/` |
+| **W3 — Load** | `--load` | `loading/` | Transform & upsert into `public.*` (teams → tournaments → rounds → matches → match_players) → export Parquet to MinIO |
 | **Analysis** | `--analysis` | `analysis/` | Generate 8 chart types from warehouse data |
 
 ```bash
@@ -342,22 +356,23 @@ uv run fifa-worker --all       # Full pipeline
 ### Data Flow
 
 ```
-CSV files (data_raw/)
+CSV files (data/raw/)
     │
     ▼
-┌─────────────────────┐     ┌────────────────┐     ┌──────────────────┐
-│  W1 — Ingest        │────▶│  MinIO (raw/)   │     │  raw.* tables     │
-│  pandas (str dtype) │     │  + asyncpg      │◀────│  (staging)        │
-└─────────────────────┘     └────────────────┘     └──────────────────┘
-                                                          │
+┌─────────────────────┐     ┌────────────────┐     ┌──────────────────────┐
+│  W1 — Ingest        │────▶│  MinIO (raw/)   │     │  raw.* tables        │
+│  pandas (str dtype) │     │  + asyncpg      │◀────│  (staging, all TEXT) │
+└─────────────────────┘     └────────────────┘     └──────────────────────┘
+                                                           │
     ┌──────────────────────────────────────────────────────┘
     ▼
-┌─────────────────────┐     ┌────────────────┐     ┌──────────────────┐
-│  W2 — Clean         │────▶│  Dead Letter    │     │  public.* tables  │
-│  Validate & cast    │     │  (invalid rows) │     │  (prod)           │
-└─────────────────────┘     └────────────────┘     └──────────────────┘
-                                                          │
-    ┌──────────────────────────────────────────────────────┘
+┌─────────────────────┐     ┌────────────────┐     ┌──────────────────────┐
+│  W2 — Clean         │────▶│  Dead Letter    │     │  public.* tables     │
+│  Validate & cast    │     │  (invalid rows) │     │  (typed, with FKs)   │
+│  → data/processed/  │     └────────────────┘     │  teams, tournaments, │
+└─────────────────────┘                            │  rounds, matches,    │
+                                                   │  match_players       │
+    ┌──────────────────────────────────────────────┴──────────────────────┘
     ▼
 ┌─────────────────────┐     ┌────────────────┐
 │  W3 — Load          │────▶│  Parquet → S3   │
@@ -392,6 +407,7 @@ With the stack running, visit:
 | `S3_SECRET_KEY` | S3 secret key | — |
 | `MINIO_ROOT_USER` | MinIO admin user | `admin` |
 | `MINIO_ROOT_PASSWORD` | MinIO admin password | — |
+| `MINIO_BUCKET` | MinIO default bucket | `core-storage` |
 
 ---
 

@@ -105,8 +105,8 @@ class CleanWinnersRow(BaseModel):
   host_country: str | None = None
   winner: str
   runners_up: str 
-  third: str | None = None
-  fourth: str | None = None
+  third_place: str | None = None
+  fourth_place: str | None = None
   goals_scored: Annotated[int, Field(ge=0, le=MAX_GOALS_PER_TOURNAMENT)]
   qualified_teams: Annotated[int, Field(ge=1, le=48)]
   matches_played: Annotated[int, Field(ge=1)]
@@ -130,6 +130,41 @@ class CleanWinnersRow(BaseModel):
       )
     return self
 
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TEAMS — extracted from matches/players → public.teams
+# ═════════════════════════════════════════════════════════════════════════════
+
+class CleanTeamRow(BaseModel):
+    """
+    Team row after extraction and validation from matches/players data.
+    W3 produces this model for upsert into public.teams.
+    """
+    initials: str
+    name: str | None = None
+    confederation: str | None = None
+
+    @field_validator("initials")
+    @classmethod
+    def validate_initials(cls, v: str) -> str:
+        val = normalize_initials(v)
+        if val is None:
+            raise ValueError(f"Iniciales Inválidas: '{v}' - deben ser 2-3 letras Mayúsculas")
+        return val
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# ROUNDS — extracted from matches → public.rounds
+# ═════════════════════════════════════════════════════════════════════════════
+
+class CleanRoundRow(BaseModel):
+    """
+    Round row after extraction and validation from matches data.
+    W3 produces this model for upsert into public.rounds.
+    """
+    round_id: Annotated[int, Field(ge=1)]
+    tournament_id: Annotated[int, Field(ge=1)]
+    round_name: str
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -182,15 +217,14 @@ class CleanMatchesRow(BaseModel):
   """
 
   match_id: Annotated[int, Field(ge=1)]
+  tournament_id: Annotated[int, Field(ge=1)]
   round_id: Annotated[int, Field(ge=1)]
   year: Annotated[int, Field(ge=MIN_WC_YEAR, le=MAX_WC_YEAR)]
   match_datetime: str | None = None
   stage: str 
   stadium: str | None = None
   city: str | None = None
-  home_team_name: str | None = None
   home_goals: Annotated[int, Field(ge=0)]
-  away_team_name: str | None = None
   away_goals: Annotated[int, Field(ge=0)]
   win_conditions: str | None = None
   attendance: Annotated[int, Field(ge=0, le=MAX_ATTENDANCE_PER_MATCH)] | None = None
@@ -279,7 +313,7 @@ class CleanPlayersRow(BaseModel):
   match_id: Annotated[int, Field(ge=1)]
   team_initials: str
   coach_name: str | None = None
-  line_up: str                      # 'S' (Start) & 'N' (Non-started)
+  lineup_type: str                      # 'S' (Start) & 'N' (Non-started)
   shirt_number: Annotated[int, Field(ge=1, le=MAX_SHIRT_NUMBER)] | None = None   # "0" (Sin asignar en el CSV)  # noqa: E501
   player_name: str
   position: str | None = None       # "GK", "DF", "MF", "FW"
@@ -295,13 +329,13 @@ class CleanPlayersRow(BaseModel):
       raise ValueError(f"Iniciales Inválidas: '{v}' - Mayúsculas")
     return val_initials
   
-  @field_validator("line_up")
+  @field_validator("lineup_type")
   @classmethod
   def validate_init_line_up(cls, v:str) -> str:
     """ Validar si inician el juego o no ['S' o 'N']"""
     val_line_up = normalized_lineup_type(v)
     if val_line_up is None:
-      raise ValueError(f"Line_up type Invalid (Tipo de Alineación es Inválida): '{v}'. Debe ser: 'S' or 'N'.")  # noqa: E501
+      raise ValueError(f"Lineup type Invalid (Tipo de Alineación es Inválida): '{v}'. Debe ser: 'S' or 'N'.")  # noqa: E501
     return val_line_up
   
   @field_validator("position")
