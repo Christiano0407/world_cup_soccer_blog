@@ -250,11 +250,211 @@ def validate_winners_row(
 # Fuente: wc_matches.csv → valida antes de cargar en public.matches
 # ─────────────────────────────────────────────────────────────────────────────
 
+def validate_matches_row(
+    raw: RawMatchesRow,
+    tournament_id: int,
+    raw_row_id: int | None = None,
+) -> ValidationResult:
+    errors: list[ValidationError] = []
+
+    # ---- match_id ---- #
+    match_id = parse_int(raw.match_id)
+    if match_id is None or match_id < 1:
+        errors.append(_err("match_id", "INVALID_MATCH_ID",
+                           f"MatchID inválido: '{raw.match_id}'"))
+
+    # ---- tournament_id ---- #
+    if tournament_id < 1:
+        errors.append(_err("tournament_id", "INVALID_TOURNAMENT_ID",
+                           f"TournamentID inválido: {tournament_id}"))
+
+    # ---- round_id ---- #
+    round_id = parse_int(raw.round_id)
+    if round_id is None or round_id < 1:
+        errors.append(_err("round_id", "INVALID_ROUND_ID",
+                           f"RoundID inválido: '{raw.round_id}'"))
+
+    # ---- year ---- #
+    year = parse_int(raw.year)
+    if year is None:
+        errors.append(_err("year", "MISSING_YEAR",
+                           f"Year vacío o no parseable: '{raw.year}'"))
+    elif not (MIN_WC_YEAR <= year <= MAX_WC_YEAR):
+        errors.append(_err("year", "INVALID_YEAR_RANGE",
+                           f"year={year} fuera del rango [{MIN_WC_YEAR}, {MAX_WC_YEAR}]"))
+
+    # ---- match_datetime ---- #
+    match_dt = parse_datetime_csv(raw.datetime)
+    match_datetime = str(match_dt) if match_dt else None
+
+    # ---- stage ---- #
+    stage = normalize_text(raw.stage, max_length=60)
+    if not stage:
+        errors.append(_err("stage", "MISSING_STAGE", "Stage vacío"))
+
+    # ---- stadium ---- #
+    stadium = normalize_text(raw.stadium, max_length=100)
+
+    # ---- city ---- #
+    city = normalize_text(raw.city, max_length=100)
+
+    # ---- home_goals ---- #
+    home_goals = parse_int(raw.home_team_goals)
+    if home_goals is None or home_goals < 0:
+        errors.append(_err("home_goals", "INVALID_HOME_GOALS",
+                           f"Home goals inválido: '{raw.home_team_goals}'"))
+
+    # ---- away_goals ---- #
+    away_goals = parse_int(raw.away_team_goals)
+    if away_goals is None or away_goals < 0:
+        errors.append(_err("away_goals", "INVALID_AWAY_GOALS",
+                           f"Away goals inválido: '{raw.away_team_goals}'"))
+
+    # ---- win_conditions ---- #
+    win_conditions = normalize_text(raw.win_conditions, max_length=200)
+
+    # ---- attendance ---- #
+    attendance = parse_attendance(raw.attendance)
+    if raw.attendance and attendance is None:
+        errors.append(_warn("attendance", "UNPARSEABLE_ATTENDANCE",
+                            f"Attendance no parseable: '{raw.attendance}'"))
+
+    # ---- ht_home_goals ---- #
+    ht_home_goals = parse_int(raw.ht_home_goals)
+
+    # ---- ht_away_goals ---- #
+    ht_away_goals = parse_int(raw.ht_away_goals)
+
+    # ---- referee ---- #
+    referee = normalize_text(raw.referee, max_length=100)
+
+    # ---- assistant_1 ---- #
+    assistant_1 = normalize_text(raw.assistant_1, max_length=100)
+
+    # ---- assistant_2 ---- #
+    assistant_2 = normalize_text(raw.assistant_2, max_length=100)
+
+    # ---- home_team_initials ---- #
+    home_team_initials = normalize_initials(raw.home_team_initials)
+    if not home_team_initials:
+        errors.append(_err("home_team_initials", "MISSING_HOME_INITIALS",
+                           f"Home team initials vacío: '{raw.home_team_initials}'"))
+
+    # ---- away_team_initials ---- #
+    away_team_initials = normalize_initials(raw.away_team_initials)
+    if not away_team_initials:
+        errors.append(_err("away_team_initials", "MISSING_AWAY_INITIALS",
+                           f"Away team initials vacío: '{raw.away_team_initials}'"))
+
+    # ---- Si hay errores graves → rechazar ---- #
+    fatal = [e for e in errors if e.severity == "error"]
+    if fatal:
+        return _invalid(errors, raw_row_id)
+
+    # ---- Construir fila limpia ---- #
+    clean = CleanMatchesRow(
+        match_id=match_id,
+        tournament_id=tournament_id,
+        round_id=round_id,
+        year=year,
+        match_datetime=match_datetime,
+        stage=stage,
+        stadium=stadium,
+        city=city,
+        home_goals=home_goals,
+        away_goals=away_goals,
+        win_conditions=win_conditions,
+        attendance=attendance,
+        ht_home_goals=ht_home_goals,
+        ht_away_goals=ht_away_goals,
+        referee=referee,
+        assistant_1=assistant_1,
+        assistant_2=assistant_2,
+        home_team_initials=home_team_initials,
+        away_team_initials=away_team_initials,
+    )
+    return _valid(clean, warnings=[e for e in errors if e.severity == "warning"], raw_row_id=raw_row_id)  # noqa: E501
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # REGLAS DE NEGOCIO: PLAYERS
 # Fuente: wc_players.csv → valida antes de cargar en public.match_players
 # ─────────────────────────────────────────────────────────────────────────────
+
+def validate_players_row(
+    raw: RawPlayersRow,
+    raw_row_id: int | None = None,
+) -> ValidationResult:
+    errors: list[ValidationError] = []
+
+    # ---- round_id ---- #
+    round_id = parse_int(raw.round_id)
+    if round_id is None or round_id < 1:
+        errors.append(_err("round_id", "INVALID_ROUND_ID",
+                           f"RoundID inválido: '{raw.round_id}'"))
+
+    # ---- match_id ---- #
+    match_id = parse_int(raw.match_id)
+    if match_id is None or match_id < 1:
+        errors.append(_err("match_id", "INVALID_MATCH_ID",
+                           f"MatchID inválido: '{raw.match_id}'"))
+
+    # ---- team_initials ---- #
+    team_initials = normalize_initials(raw.team_initials)
+    if not team_initials:
+        errors.append(_err("team_initials", "MISSING_TEAM_INITIALS",
+                           f"Team initials vacío: '{raw.team_initials}'"))
+
+    # ---- coach_name ---- #
+    coach_name = normalize_text(raw.coach_name, max_length=100)
+
+    # ---- lineup_type ---- #
+    lineup_type = normalized_lineup_type(raw.line_up)
+    if not lineup_type:
+        errors.append(_err("lineup_type", "INVALID_LINEUP_TYPE",
+                           f"Lineup type inválido: '{raw.line_up}'. Debe ser 'S' o 'N'"))
+
+    # ---- shirt_number ---- #
+    shirt_number = parse_int(raw.shirt_number)
+    if shirt_number is not None and shirt_number == 0:
+        shirt_number = None
+
+    # ---- player_name ---- #
+    player_name = normalize_text(raw.player_name, max_length=100)
+    if not player_name:
+        errors.append(_err("player_name", "MISSING_PLAYER_NAME",
+                           "Player name vacío"))
+
+    # ---- position ---- #
+    position = normalize_player_position(raw.position)
+    if raw.position and not position:
+        errors.append(_warn("position", "UNKNOWN_POSITION",
+                            f"Posición no reconocida: '{raw.position}'"))
+
+    # ---- event_code ---- #
+    event_code = normalized_event_football_players_code(raw.event)
+    if raw.event and not event_code:
+        errors.append(_warn("event_code", "UNKNOWN_EVENT_CODE",
+                            f"Event code no reconocido: '{raw.event}'"))
+
+    # ---- Si hay errores graves → rechazar ---- #
+    fatal = [e for e in errors if e.severity == "error"]
+    if fatal:
+        return _invalid(errors, raw_row_id)
+
+    # ---- Construir fila limpia ---- #
+    clean = CleanPlayersRow(
+        round_id=round_id,
+        match_id=match_id,
+        team_initials=team_initials,
+        coach_name=coach_name,
+        lineup_type=lineup_type,
+        shirt_number=shirt_number,
+        player_name=player_name,
+        position=position,
+        event_code=event_code,
+    )
+    return _valid(clean, warnings=[e for e in errors if e.severity == "warning"], raw_row_id=raw_row_id)  # noqa: E501
 
 
 # ─────────────────────────────────────────────────────────────────────────────
