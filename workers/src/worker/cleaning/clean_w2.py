@@ -214,8 +214,36 @@ async def _clean_matches(pool: asyncpg.Pool) -> CleanResults:
       rows_rejected=0, 
       rows_with_warning=0
    )
-   pass
+   
+   async for batch in _fetch_batches(pool, "raw.wc_matches"):
+      result.rows_checked += len(batch)
+      for row in batch:
+         raw = RawMatchesRow(
+            year=row["year"],
+            datetime=row["datetime"],
+            stage=row["stage"],
+            stadium=row["stadium"],
+            city=row["city"],
+            home_team_name=row["home_team_name"],
+            home_team_goals=row["home_team_goals"],
+            away_team_goals=row["away_team_goals"],
+            away_team_name=row["away_team_name"],
+            win_conditions=row["win_conditions"],
+            attendance=row["attendance"],
+            ht_home_goals=row["ht_home_goals"],
+            ht_away_goals=row["ht_away_goals"],
+            referee=row["referee"],
+            assistant_1=row["assistant_1"],
+            assistant_2=row["assistant_2"],
+            round_id=row["round_id"],
+            match_id=row["match_id"],
+            home_team_initials=row["home_team_initials"],
+            away_team_initials=row["away_team_initials"],
+         )
+         validation = validate_matches_row(raw, raw_row_id=row["_row_id"])
+         await _persist(pool, validation, "raw.wc_matches", row["_row_id"], result)
 
+   return result
 
 async def _clean_players(pool: asyncpg.Pool) -> CleanResults:
    result = CleanResults (
@@ -225,7 +253,25 @@ async def _clean_players(pool: asyncpg.Pool) -> CleanResults:
       rows_rejected=0, 
       rows_with_warning=0
    )
-   pass
+   
+   async for batch in _fetch_batches(pool, "raw.wx_players"):
+      result.rows_checked += len(batch)
+      for row in batch:
+         raw = RawPlayersRow(
+            round_id=row["round_id"],
+            match_id=row["match_id"],
+            team_initials=row["team_initials"],
+            coach_name=row["coach_name"],
+            line_up=row["line_up"],
+            shirt_number=row["shirt_number"],
+            player_name=row["player_name"],
+            position=row["position"],
+            event=row["event"],
+         )
+         validation = validate_players_row(raw, raw_row_id=row["_row_id"])
+         await _persist(pool, validation="raw.wc_players", row["_row_id"], result)
+     
+      return result 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FETCH EN LOTES — evita cargar todo el dataset en memoria
