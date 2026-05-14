@@ -35,15 +35,15 @@ El f-string en update_sql usa valores de constants.py — nunca input externo.
 from __future__ import annotations
 
 import re
+import asyncpg
+import pandas as pd
+import structlog
+from typing import AsyncGenerator
+
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 from sqlalchemy.orm import Session
-
-import asyncpg
-import pandas as pd
-import structlog
-
 from worker.core.config import Settings
 from worker.validators.rules import (
   ValidationResult, 
@@ -53,18 +53,16 @@ from worker.validators.rules import (
   validate_team_row, 
   validate_round_row
 )
-
 from worker.validators.schemas import (
   RawMatchesRow, 
   RawPlayersRow, 
   RawWinnersRow, 
 )
-
 from worker.utils.constants import DatasetKind
 
-log = structlog.get_logger(__name__) # - Logs / History -Real Time - #
 
-BATCH_SIZE = 100 # filas por lote — ajustar según RAM disponible
+log = structlog.get_logger(__name__) # - Logs / History -Real Time - #
+BATCH_SIZE = 50 # filas por lote — ajustar según RAM disponible
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -148,19 +146,132 @@ async def clean_dataset(dataset: DatasetKind, settings:Settings) -> CleanResults
       max_size=10,
       command_timeout=60,
    )
+   pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # LIMPIEZA POR DATASET
 # ─────────────────────────────────────────────────────────────────────────────
+async def _clean_winners(pool: asyncpg.Pool) -> CleanResults:
+   result = CleanResults(
+      dataset="winners", 
+      rows_checked=0, 
+      rows_valid=0, 
+      rows_rejected=0, 
+      rows_with_warning=0
+   )
+   pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FETCH EN LOTES — evita cargar todo el dataset en memoria
 # ─────────────────────────────────────────────────────────────────────────────
 
+async def _fetch_batches(
+      pool: asyncpg.Pool, 
+      table:str,
+      batch_size: int = BATCH_SIZE,
+) -> AsyncGenerator[list[asyncpg.Record], None]:
+    """
+      - Generador asíncrono que lee filas pendientes en lotes.
+      - Usa LIMIT + OFFSET sobre _row_id para paginación estable.
+      - table viene de constants.py — nunca de input externo.
+    """
+    offset = 0
+    query = (
+       f"SELECT * FROM {table} "  # noqa: S608
+       F"WHERE _is_valid IS NULL"
+       F"ORDER BY _row_id "
+       F"LIMIT {batch_size} OFFSET  $1"
+    )
+
+    while True:
+       async with pool.acquire() as conn:
+          batch = await conn.fetch(query, offset)
+
+       if not batch:
+          break
+       
+       log.debug("w2.batch", table=table, offset=offset, n=len(batch))
+       yield list(batch)
+       offset += batch_size
+
 
  
 # ─────────────────────────────────────────────────────────────────────────────
 # PERSISTENCIA — una transacción atómica por fila inválida
+  # - Validación de filas [Dataset / datos] - Validación todo el tiempo
 # ─────────────────────────────────────────────────────────────────────────────
+
+async def _persist(
+      pool: asyncpg.Pool, 
+      validation: ValidationResult, 
+      table: str, 
+      row_id: int,
+      result: CleanResults,
+) -> None:
+    """
+      - Persiste resultado de validación de una fila.
+ 
+      Válida   → UPDATE _is_valid=TRUE
+      Inválida → transacción: UPDATE _is_valid=FALSE + INSERT dead_letter
+ 
+      - table viene de constants.py — f-string seguro, nunca input externo.
+      - Valores van en $N — sin concatenación de datos en SQL.
+
+      - Evitar SQL Injection [Problemas de Seguridad & Ciberseguridad]
+    """
+    update_sql = f"UPDATE {table} SET _is_valid = $1 WHERE _row_id = $2"  # noqa: S608
+
+    async with pool.acquire() as conn:
+       if validation.is_valid:
+          await conn.execute(update_sql, True, row_id)
+          result.rows_valid += 1
+
+          if validation.has_warning:
+             result.rows_with_warning += 1
+             for w in validation.errors:
+                if w.severity == "warning":
+                   result.warning_breakdown[w.code] = (
+                      result.warning_breakdown.get(w.code, 0) + 1
+                   )
+                   log.warning(
+                      "w2.row_warning",
+                      table=table,
+                      row_id=row_id, 
+                      code=w.code,
+                      field=w.field,
+                      msg=w.message,
+                   )
+
+          else:
+             async with conn.transaction():
+                await conn.execute(update_sql, False, row_id)
+                await conn.execute(
+                    """
+                    INSERT INTO raw.dead_letter (
+                        _source_table,
+                        _source_row_id,
+                        _error_code,
+                        _error_detail
+                    ) VALUES ($1, $2, $3, $4)
+                    """,
+                    table,
+                    row_id,
+                    validation.first_error_code or "UNKNOWN_ERROR",
+                    validation.error_detail[:2000],
+                )
+ 
+                result.rows_rejected += 1
+                for code in validation.error_code:
+                    result.error_breakdown[code] = (
+                        result.error_breakdown.get(code, 0) + 1
+                    )
+                log.warning(
+                    "w2.row_rejected",
+                    table=table,
+                    row_id=row_id,
+                    code=validation.first_error_code,
+                    all_codes=validation.error_code,
+                )
+             
