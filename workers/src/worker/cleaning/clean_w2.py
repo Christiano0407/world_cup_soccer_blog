@@ -85,6 +85,34 @@ class CleanResults:
   error_breakdown: dict[str, int] = field(default_factory=dict)
   warning_breakdown: dict[str, int] = field(default_factory=dict)
 
+  @property
+  def rejection_rate(self) -> float:
+    """ Saber cuántas & cuáles fueron rechazadas (datos)"""
+    if self.rows_checked == 0:
+      return 0.0
+    return round(self.rows_rejected / self.rows_checked * 100, 2)
+  
+  @property
+  def is_acceptable(self) -> bool:
+    "False si la tasa de rechazo supera el 10% — señal de problema en el CSV [Dataset]."
+    return self.rejection_rate < 10.0
+  
+  def log_summary(self) -> None:
+        """ History all Process (Real Time) """
+        log.info(
+            "w2.summary",
+            dataset=self.dataset,
+            rows_checked=self.rows_checked,
+            rows_valid=self.rows_valid,
+            rows_rejected=self.rows_rejected,
+            rows_with_warnings=self.rows_with_warning,
+            rejection_rate_pct=self.rejection_rate,
+            acceptable=self.is_acceptable,
+            top_errors=sorted(
+                self.error_breakdown.items(), key=lambda x: -x[1]
+            )[:5],
+        )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ENTRYPOINT PÚBLICO
