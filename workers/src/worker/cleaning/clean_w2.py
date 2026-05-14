@@ -117,6 +117,37 @@ class CleanResults:
 # ─────────────────────────────────────────────────────────────────────────────
 # ENTRYPOINT PÚBLICO
 # ─────────────────────────────────────────────────────────────────────────────
+async def clean_dataset(dataset: DatasetKind, settings:Settings) -> CleanResults:
+   """
+     W2_clean — entrypoint principal. Llamado por el runner del pipeline.
+ 
+    Args:
+        dataset:  "winners" | "matches" | "players"
+        settings: configuración del entorno (DSN postgres, etc.)
+ 
+    Returns:
+        CleanResult con métricas. Si result.is_acceptable=False,
+        el runner puede detener el pipeline antes de W3 (load) - No cumplen con requisitos.
+    
+    Pool Connection:
+        Connection Pool es un conjunto reutilizable de conexiones abiertas hacia PostgreSQL.
+        abrir/cerrar conexiones constantemente, el pool:
+              - crea conexiones una sola vez
+              - las mantiene vivas
+              - las reutiliza
+              - mejora rendimiento
+              - reduce latencia
+              - evita saturar PostgreSQL 
+        - _dns [Data Source Name]
+   """
+   log.info("w2.start", dataset=dataset)
+
+   pool = await asyncpg.create_pool(
+      settings.postgres_dsn,
+      min_size=2,
+      max_size=10,
+      command_timeout=60,
+   )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
