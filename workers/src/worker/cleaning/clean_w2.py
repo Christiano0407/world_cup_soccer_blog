@@ -34,16 +34,11 @@ El f-string en update_sql usa valores de constants.py — nunca input externo.
 
 from __future__ import annotations
 
-import re
 import asyncpg
-import pandas as pd
 import structlog
 from typing import AsyncGenerator
 
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Literal
-from sqlalchemy.orm import Session
 from worker.core.config import Settings
 from worker.validators.rules import (
   ValidationResult, 
@@ -59,6 +54,7 @@ from worker.validators.schemas import (
   RawWinnersRow, 
 )
 from worker.utils.constants import DatasetKind
+from worker.utils.helpers import parse_int
 
 
 log = structlog.get_logger(__name__) # - Logs / History -Real Time - #
@@ -103,7 +99,7 @@ class CleanResults:
             rows_checked=self.rows_checked,
             rows_valid=self.rows_valid,
             rows_rejected=self.rows_rejected,
-            rows_with_warnings=self.rows_with_warning,
+            rows_with_warning=self.rows_with_warning,
             rejection_rate_pct=self.rejection_rate,
             acceptable=self.is_acceptable,
             top_errors=sorted(
@@ -185,7 +181,7 @@ async def _clean_winners(pool: asyncpg.Pool) -> CleanResults:
       rows_rejected=0, 
       rows_with_warning=0
    )
-   async for batch in _fetch_batches(pool, "ra.wc_winners"):
+   async for batch in _fetch_batches(pool, "raw.wc_winners"):
       result.rows_checked += len(batch)
       for row in batch:
          raw = RawWinnersRow(
@@ -200,7 +196,7 @@ async def _clean_winners(pool: asyncpg.Pool) -> CleanResults:
             matches_played=row["matches_played"],
             attendance=row["attendance"],
          )
-         validation = validate_winners_row(raw, raw_row_id=["_row_id"])
+         validation = validate_winners_row(raw, raw_row_id=row["_row_id"])
          await _persist(pool, validation, "raw.wc_winners", row["_row_id"], result)
 
    return result
@@ -218,30 +214,32 @@ async def _clean_matches(pool: asyncpg.Pool) -> CleanResults:
    async for batch in _fetch_batches(pool, "raw.wc_matches"):
       result.rows_checked += len(batch)
       for row in batch:
-         raw = RawMatchesRow(
-            year=row["year"],
-            datetime=row["datetime"],
-            stage=row["stage"],
-            stadium=row["stadium"],
-            city=row["city"],
-            home_team_name=row["home_team_name"],
-            home_team_goals=row["home_team_goals"],
-            away_team_goals=row["away_team_goals"],
-            away_team_name=row["away_team_name"],
-            win_conditions=row["win_conditions"],
-            attendance=row["attendance"],
-            ht_home_goals=row["ht_home_goals"],
-            ht_away_goals=row["ht_away_goals"],
-            referee=row["referee"],
-            assistant_1=row["assistant_1"],
-            assistant_2=row["assistant_2"],
-            round_id=row["round_id"],
-            match_id=row["match_id"],
-            home_team_initials=row["home_team_initials"],
-            away_team_initials=row["away_team_initials"],
-         )
-         validation = validate_matches_row(raw, raw_row_id=row["_row_id"])
-         await _persist(pool, validation, "raw.wc_matches", row["_row_id"], result)
+          raw = RawMatchesRow(
+             year=row["year"],
+             datetime=row["datetime"],
+             stage=row["stage"],
+             stadium=row["stadium"],
+             city=row["city"],
+             home_team_name=row["home_team_name"],
+             home_team_goals=row["home_team_goals"],
+             away_team_goals=row["away_team_goals"],
+             away_team_name=row["away_team_name"],
+             win_conditions=row["win_conditions"],
+             attendance=row["attendance"],
+             ht_home_goals=row["ht_home_goals"],
+             ht_away_goals=row["ht_away_goals"],
+             referee=row["referee"],
+             assistant_1=row["assistant_1"],
+             assistant_2=row["assistant_2"],
+             round_id=row["round_id"],
+             match_id=row["match_id"],
+             home_team_initials=row["home_team_initials"],
+             away_team_initials=row["away_team_initials"],
+          )
+          year_int = parse_int(row["year"])
+          tournament_id = ((year_int - 1930) // 4) + 1 if year_int else None
+          validation = validate_matches_row(raw, tournament_id=tournament_id, raw_row_id=row["_row_id"])
+          await _persist(pool, validation, "raw.wc_matches", row["_row_id"], result)
 
    return result
 
@@ -254,7 +252,7 @@ async def _clean_players(pool: asyncpg.Pool) -> CleanResults:
       rows_with_warning=0
    )
    
-   async for batch in _fetch_batches(pool, "raw.wx_players"):
+   async for batch in _fetch_batches(pool, "raw.wc_players"):
       result.rows_checked += len(batch)
       for row in batch:
          raw = RawPlayersRow(
@@ -269,9 +267,9 @@ async def _clean_players(pool: asyncpg.Pool) -> CleanResults:
             event=row["event"],
          )
          validation = validate_players_row(raw, raw_row_id=row["_row_id"])
-         await _persist(pool, validation="raw.wc_players", row["_row_id"], result)
-     
-      return result 
+         await _persist(pool, validation, "raw.wc_players", row["_row_id"], result)
+
+   return result 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FETCH EN LOTES — evita cargar todo el dataset en memoria
@@ -354,34 +352,34 @@ async def _persist(
                       msg=w.message,
                    )
 
-          else:
-             async with conn.transaction():
-                await conn.execute(update_sql, False, row_id)
-                await conn.execute(
-                    """
-                    INSERT INTO raw.dead_letter (
-                        _source_table,
-                        _source_row_id,
-                        _error_code,
-                        _error_detail
-                    ) VALUES ($1, $2, $3, $4)
-                    """,
-                    table,
-                    row_id,
-                    validation.first_error_code or "UNKNOWN_ERROR",
-                    validation.error_detail[:2000],
-                )
- 
-                result.rows_rejected += 1
-                for code in validation.error_code:
-                    result.error_breakdown[code] = (
-                        result.error_breakdown.get(code, 0) + 1
-                    )
-                log.warning(
-                    "w2.row_rejected",
-                    table=table,
-                    row_id=row_id,
-                    code=validation.first_error_code,
-                    all_codes=validation.error_code,
-                )
+       else:
+          async with conn.transaction():
+             await conn.execute(update_sql, False, row_id)
+             await conn.execute(
+                 """
+                 INSERT INTO raw.dead_letter (
+                     _source_table,
+                     _source_row_id,
+                     _error_code,
+                     _error_detail
+                 ) VALUES ($1, $2, $3, $4)
+                 """,
+                 table,
+                 row_id,
+                 validation.first_error_code or "UNKNOWN_ERROR",
+                 validation.error_detail[:2000],
+             )
+
+             result.rows_rejected += 1
+             for code in validation.error_code:
+                 result.error_breakdown[code] = (
+                     result.error_breakdown.get(code, 0) + 1
+                 )
+             log.warning(
+                 "w2.row_rejected",
+                 table=table,
+                 row_id=row_id,
+                 code=validation.first_error_code,
+                 all_codes=validation.error_code,
+             )
              
