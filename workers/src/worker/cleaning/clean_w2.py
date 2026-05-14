@@ -146,9 +146,34 @@ async def clean_dataset(dataset: DatasetKind, settings:Settings) -> CleanResults
       max_size=10,
       command_timeout=60,
    )
-   pass
 
+   try: 
+      match dataset:
+         case "winners":
+            result = await _clean_winners(pool)
+         case "matches":
+            result = await _clean_matches(pool)
+         case "players":
+            result = await _clean_players(pool)
+         case _:
+            raise ValueError(
+               f"Dataset desconocido: '{dataset}' "
+               " - debe ser winners | matches | players "
+            )
+   finally: 
+      await pool.close()
 
+   if not result.is_acceptable:
+      log.warning(
+         "w2.high_rejection_rate",
+         dataset=dataset,
+         rate_pct=result.rejection_rate,
+         message = "Tasa de Rechazo > 10% | Revisar la calidad de los Dataset [CSV] & DB",
+      )
+
+   return result
+
+    
 # ─────────────────────────────────────────────────────────────────────────────
 # LIMPIEZA POR DATASET
 # ─────────────────────────────────────────────────────────────────────────────
@@ -160,8 +185,47 @@ async def _clean_winners(pool: asyncpg.Pool) -> CleanResults:
       rows_rejected=0, 
       rows_with_warning=0
    )
+   async for batch in _fetch_batches(pool, "ra.wc_winners"):
+      result.rows_checked += len(batch)
+      for row in batch:
+         raw = RawWinnersRow(
+            year=row["year"],
+            country=row["country"],
+            winner=row["winner"],
+            runners_up=row["runners_up"],
+            third=row["third"],
+            fourth=row["fourth"],
+            goals_scored=row["goals_scored"],
+            qualified_teams=row["qualified_teams"],
+            matches_played=row["matches_played"],
+            attendance=row["attendance"],
+         )
+         validation = validate_winners_row(raw, raw_row_id=["_row_id"])
+         await _persist(pool, validation, "raw.wc_winners", row["_row_id"], result)
+
+   return result
+
+
+async def _clean_matches(pool: asyncpg.Pool) -> CleanResults:
+   result = CleanResults (
+      dataset="matches", 
+      rows_checked=0, 
+      rows_valid=0, 
+      rows_rejected=0, 
+      rows_with_warning=0
+   )
    pass
 
+
+async def _clean_players(pool: asyncpg.Pool) -> CleanResults:
+   result = CleanResults (
+      dataset="players", 
+      rows_checked=0, 
+      rows_valid=0, 
+      rows_rejected=0, 
+      rows_with_warning=0
+   )
+   pass
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FETCH EN LOTES — evita cargar todo el dataset en memoria
