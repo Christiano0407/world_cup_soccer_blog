@@ -26,7 +26,16 @@ def run_ingest() -> None:
 
 def run_clean() -> None:
     """W2: Validate + mark valid/invalid."""
-    print("W2: Clean pipeline — not yet implemented")
+    import asyncio
+
+    from worker.cleaning.clean_w2 import clean_dataset
+    from worker.core.config import settings
+
+    async def _run() -> None:
+        for ds in ["winners", "matches", "players"]:
+            await clean_dataset(ds, settings)
+
+    asyncio.run(_run())
 
 
 def run_load() -> None:

@@ -24,7 +24,7 @@ MEJORAS vs versión anterior:
   - Usa RawXxxRow de schemas.py — tipado explícito por dataset
   - Pool de conexiones en vez de conexión única
   - Batch processing: lotes de BATCH_SIZE para no cargar todo en RAM
-  - CleanResult con rejection_rate, is_acceptable y log_summary
+  - CleanResults con rejection_rate, is_acceptable y log_summary
   - Transacción atómica por fila inválida (UPDATE + INSERT dead_letter)
   - match/case en vez de if/elif anidados (Python 3.10+)
  
@@ -45,8 +45,6 @@ from worker.validators.rules import (
   validate_matches_row, 
   validate_players_row, 
   validate_winners_row, 
-  validate_team_row, 
-  validate_round_row
 )
 from worker.validators.schemas import (
   RawMatchesRow, 
@@ -120,7 +118,7 @@ async def clean_dataset(dataset: DatasetKind, settings:Settings) -> CleanResults
         settings: configuración del entorno (DSN postgres, etc.)
  
     Returns:
-        CleanResult con métricas. Si result.is_acceptable=False,
+        CleanResults con métricas. Si result.is_acceptable=False,
         el runner puede detener el pipeline antes de W3 (load) - No cumplen con requisitos.
     
     Pool Connection:
@@ -158,6 +156,8 @@ async def clean_dataset(dataset: DatasetKind, settings:Settings) -> CleanResults
             )
    finally: 
       await pool.close()
+
+   result.log_summary()
 
    if not result.is_acceptable:
       log.warning(
@@ -287,10 +287,10 @@ async def _fetch_batches(
     """
     offset = 0
     query = (
-       f"SELECT * FROM {table} "  # noqa: S608
-       F"WHERE _is_valid IS NULL"
-       F"ORDER BY _row_id "
-       F"LIMIT {batch_size} OFFSET  $1"
+        f"SELECT * FROM {table} "  # noqa: S608
+       f"WHERE _is_valid IS NULL "
+       f"ORDER BY _row_id "
+       f"LIMIT {batch_size} OFFSET  $1"
     )
 
     while True:
