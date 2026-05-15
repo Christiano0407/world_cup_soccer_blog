@@ -18,3 +18,16 @@ CREATE INDEX IF NOT EXISTS idx_wc_matches_valid ON raw.wc_matches (_is_valid) WH
 CREATE INDEX IF NOT EXISTS idx_wc_players_valid ON raw.wc_players (_is_valid) WHERE _is_valid IS NULL; 
 
 -- ====== Paso 3 — Recrear raw.dead_letter con columnas correctas ===== --
+
+DROP TABLE IF EXISTS raw.dead_letter;
+
+CREATE TABLE raw.dead_letter (
+  id              BIGSERIAL     PRIMARY KEY,
+  _source_table   TEXT          NOT NULL,
+  _source_row_id  BIGINT,
+  _error_code     TEXT          NOT NULL,
+  _error_details  TEXT, 
+  _rejected_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+); 
+
+CREATE INDEX IF NOT EXIST idx_dead_letter_source ON raw.idx_dead_letter (_source_table); 
