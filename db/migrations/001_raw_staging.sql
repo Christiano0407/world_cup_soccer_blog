@@ -8,8 +8,12 @@
 
 -- ─── WINNERS STAGING ──────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS raw.wc_winners (
-    id              BIGSERIAL       PRIMARY KEY,
-    _source_file    TEXT            NOT NULL,
+    _row_id         BIGSERIAL       PRIMARY KEY,
+    _source_file    VARCHAR(255)    NOT NULL,               -- CSV filename
+    _ingested_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    _is_valid       BOOLEAN         DEFAULT NULL,           -- set by W2 Clean
+
+    -- Original CSV: columns (all TEXT — no casting in raw) 
     year            TEXT,
     country         TEXT,
     winner          TEXT,
@@ -29,8 +33,11 @@ COMMENT ON COLUMN raw.wc_winners._file_hash IS 'SHA-256 of source file for repro
 
 -- ─── MATCHES STAGING ──────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS raw.wc_matches (
-    id                  BIGSERIAL       PRIMARY KEY,
-    _source_file        TEXT            NOT NULL,
+    _row_id         BIGSERIAL       PRIMARY KEY,
+    _source_file    VARCHAR(255)    NOT NULL,
+    _ingested_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    _is_valid       BOOLEAN         DEFAULT NULL,
+
     year                TEXT,
     datetime            TEXT,
     stage               TEXT,
@@ -60,8 +67,11 @@ COMMENT ON COLUMN raw.wc_matches._file_hash IS 'SHA-256 of source file for repro
 
 -- ─── PLAYERS STAGING ──────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS raw.wc_players (
-    id              BIGSERIAL       PRIMARY KEY,
-    _source_file    TEXT            NOT NULL,
+    _row_id         BIGSERIAL       PRIMARY KEY,
+    _source_file    VARCHAR(255)    NOT NULL,
+    _ingested_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    _is_valid       BOOLEAN         DEFAULT NULL,
+
     round_id        TEXT,
     match_id        TEXT,
     team_initials   TEXT,
@@ -71,8 +81,6 @@ CREATE TABLE IF NOT EXISTS raw.wc_players (
     player_name     TEXT,
     position        TEXT,
     event           TEXT,
-    _ingested_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    _file_hash      TEXT
 );
 
 COMMENT ON TABLE  raw.wc_players IS 'Staging: raw CSV data from wc_players.csv';
@@ -80,6 +88,13 @@ COMMENT ON COLUMN raw.wc_players._file_hash IS 'SHA-256 of source file for repro
 
 -- ─── DEAD LETTER QUEUE ────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS raw.dead_letter (
+    _dl_id          BIGSERIAL       PRIMARY KEY,
+    _source_table   VARCHAR(60)     NOT NULL,   -- which raw table
+    _source_row_id  BIGINT          NOT NULL,
+    _error_code     VARCHAR(30)     NOT NULL,   -- e.g. MISSING_YEAR
+    _error_detail   TEXT,
+    _rejected_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+
     id              BIGSERIAL       PRIMARY KEY,
     dataset         TEXT            NOT NULL,
     raw_row_id      BIGINT,
@@ -92,3 +107,6 @@ CREATE TABLE IF NOT EXISTS raw.dead_letter (
 COMMENT ON TABLE  raw.dead_letter          IS 'Rejected rows from W2 validation with structured error codes';
 COMMENT ON COLUMN raw.dead_letter.dataset  IS 'Dataset name: winners, matches, or players';
 COMMENT ON COLUMN raw.dead_letter.error_code IS 'Machine-readable error code from rules.py ValidationError.code';
+COMMENT ON TABLE raw.wc_winners  IS 'Staging: CSV winners — no type casting';
+COMMENT ON TABLE raw.wc_matches  IS 'Staging: CSV matches — no type casting';
+COMMENT ON TABLE raw.wc_players  IS 'Staging: CSV players — no type casting';
