@@ -122,7 +122,24 @@ COMMENT ON MATERIALIZED VIEW warehouse.goals_by_stage
 
 
 -- ─── VIEW: Attendance trends ─────────────────────────────────
+CREATE MATERIALIZED VIEW IF NOT EXISTS warehouse.attendance_trends AS
+SELECT
+    t.year, 
+    t.host_country, 
+    t.qualified_teams, 
+    t.matches_played, 
+    t.attendance_total,
+    SUM(m.attendance)                                   AS sum_match_attendance, 
+    MAX(m.attendance)                                   AS max_attendance,
+    MIN(m.attendance) FILTER (WHERE m.attendance > 0)   AS min_attendance,
+    AVG(m.attendance)::INTEGER                          AS avg_attendance
+FROM public.tournament t
+LEFT JOIN public.matches m ON t.tournament_id = m.tournament_id
+GROUP BY t.year, t.host_country, t.qualified_teams, t.matches_played, t.attendance_total
+ORDER BY t.year; 
 
+COMMENT ON MATERIALIZED VIEW warehouse.attendance_trends
+    IS 'Dashboard: stadium attendance patterns across editions';
 
 -- ─── VIEW: Player participation (positions) ──────────────────
 
