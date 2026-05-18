@@ -4,6 +4,7 @@
 -- Schema   : public
 -- Anti SQLi: All inserts via parameterized queries ($1..$N)
 --            Never build queries via string concatenation.
+-- DDR / DDL [Entidad - Relación]
 -- =============================================================
 
 -- ─── LOOKUP: Teams ───────────────────────────────────────────

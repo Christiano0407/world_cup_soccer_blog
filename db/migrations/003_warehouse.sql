@@ -10,6 +10,10 @@
 -- "Una View (vista) en SQL es una tabla virtual creada a partir del resultado de una consulta SELECT.  
 -- No almacena datos físicamente, sino que guarda la definición de la consulta, lo que permite presentar datos de una o más tablas 
 -- subyacentes de forma -- simplificada y personalizada ".
+-- # ============================================================= #
+-- Data Warehouse: "Un Data Warehouse (almacén de datos) es un sistema centralizado diseñado para recopilar, integrar y almacenar 
+-- grandes volúmenes de datos provenientes de múltiples fuentes operativas, con el objetivo específico de facilitar el análisis, 
+-- la generación de informes y la toma de decisiones empresariales".
 -- =============================================================
 
 -- === VIEW: Goals per Tournament === 

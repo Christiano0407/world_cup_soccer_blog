@@ -4,6 +4,7 @@
 -- Schema   : raw
 -- Anti SQLi: All queries use parameterized execution ($1..$N).
 --            Never build queries via string concatenation.
+-- raw: Datos 'Crudos', que vamos a usar.
 -- =============================================================
 
 -- ─── WINNERS STAGING ──────────────────────────────────────────
