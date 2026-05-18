@@ -33,6 +33,43 @@ COMMENT ON MATERIALIZED VIEW warehouse.goals_per_tournament
 
 
 -- === VIEW: Team performance across all editions === 
+CREATE MATERIALIZED VIEW IF NOT EXISTS warehouse.team_performance AS 
+SELECT
+    tm.initials, 
+    tm.name                                                  AS team_name,
+    COUNT(DISTINCT  t.tournament_id)                         AS tournament_played,
+    SUM(CASE WHEN t.winner = tm.name THEN 1 ELSE 0 END)      AS titles,
+    SUM(CASE WHEN t.runners_up = tm.name THEN 1 ELSE 0 END)  AS runner_ups,
+    SUM(CASE WHEN t.third_place = tm.name THEN 1 ELSE 0 END) AS third_place,
+    --  Match Result
+    COUNT(DISTINCT m.match_id)                               AS total_matches,
+    SUM(CASE 
+        WHEN m.home_team_initials = tm.initials AND m.home_goals > m.away_goals THEN 1
+        WHEN m.away_team_initials = tm.initials AND m.away_goals > m.home_goals THEN 1
+        ELSE 0 END)                                          AS wins,
+    SUM(
+        WHEN m.home_goals = m.away_goals then 1
+        ELSE 0 END)                                          AS draws,
+    SUM(
+        WHEN m.home_team_initials = tm.initials AND m.home_goals < m.away_goals THEN 1
+        WHEN m.away_team_initials = tm.initials AND m.away_goals < m.home_goals THEN 1
+        ELSE 0 END)                                          AS losses,
+    --  Goals
+    SUM(CASE WHEN m.home_team_initials = tm.initials THEN m.home_goals
+             WHEN m.away_team_initials = tm.initials THEN m.away_goals 
+             ELSE 0 END)                                     AS goals_scored,
+    SUM(CASE WHEN m.home_team_initials = tm.initials THEN m.away_goals
+             WHEN m.away_team_initials = tm.initials THEN m.home_goals
+             ELSE 0 END)                                     AS goals_conceded
+FROM public.teams tm
+LEFT JOIN public.matches m
+    ON tm.initials IN (m.home_team_initials, m.away_team_initials)
+LEFT JOIN public.tournament t
+GROUP BY tm.initials, tm.name
+ORDER BY titles DESC, wins DESC; 
+
+COMMENT ON MATERIALIZED VIEW warehouse.team_performance
+    IS 'Dashboard: all-time team stats — titles, W/D/L, goals';
 
 
 -- ─── VIEW: Top scorers (by event_code = G / OG) ──────────────
