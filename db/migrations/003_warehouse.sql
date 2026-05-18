@@ -1,6 +1,6 @@
--- =============================================================
+-- =====================================================================================================================================
 -- FIFA World Cup Platform — Migration 003: Warehouse Layer
--- =============================================================
+-- # ============================================================= #
 -- Schema   : warehouse
 -- Purpose  : Pre-aggregated views for dashboards and analytics
 --            Python (Pandas/Polars) + D3.js consume these views.
@@ -14,7 +14,7 @@
 -- Data Warehouse: "Un Data Warehouse (almacén de datos) es un sistema centralizado diseñado para recopilar, integrar y almacenar 
 -- grandes volúmenes de datos provenientes de múltiples fuentes operativas, con el objetivo específico de facilitar el análisis, 
 -- la generación de informes y la toma de decisiones empresariales".
--- =============================================================
+-- ====================================================================================================================================
 
 -- === VIEW: Goals per Tournament === 
 CREATE MATERIALIZED VIEW IF NOT EXISTS warehouse.goals_per_tournament AS 
@@ -77,6 +77,25 @@ COMMENT ON MATERIALIZED VIEW warehouse.team_performance
 
 
 -- ─── VIEW: Top scorers (by event_code = G / OG) ──────────────
+CREATE MATERIALIZED VIEW IF NOT EXISTS warehouse.top_scored AS 
+SELECT 
+    mp.player_name,
+    mp.team_initials,
+    COUNT(*) FILTER (WHERE mp.event_code LIKE 'G%')    AS goals,
+    COUNT(*) FILTER (WHERE mp.event_code = 'OG')       AS own_goals,
+    COUNT(DISTINCT mp.match_id)                        AS matches_played,
+    MIN(t.year)                                        AS first_wc,
+    MAX(t.year)                                        AS last_wc,
+    COUNT(DISTINCT m.tournament_id)                    AS editions
+FROM public.match_players mp
+JOIN public.matches m     ON mp.match_id = m.match_id
+JOIN public.tournament t  ON m.tournament_id = t.tournament_id
+WHERE mp.event_code IS NOT NULL
+GROUP BY mp.player_name, mp.team_initials
+ORDER BY goals DESC;   
+
+COMMENT ON MATERIALIZED VIEW warehouse.top_scorers
+    IS 'Dashboard: all-time goal scorers across all World Cups';
 
 
 -- ─── VIEW: Goals by match stage ──────────────────────────────
