@@ -20,7 +20,7 @@ CREATE SCHEMA IF NOT EXISTS warehouse;
 CREATE SCHEMA IF NOT EXISTS audit;
 
 -- Default search path
-ALTER DATABASE postgres SET search_path TO public, warehouse, audit;  
+ALTER DATABASE "data-world-cup" SET search_path TO public, warehouse, audit;  
 
 COMMENT ON SCHEMA raw       IS 'Staging area — CSV data before validation';
 COMMENT ON SCHEMA public    IS 'Production data — validated and normalized';

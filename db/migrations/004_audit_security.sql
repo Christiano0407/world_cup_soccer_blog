@@ -35,7 +35,7 @@ COMMENT ON TABLE audit.change_log IS 'Row-level audit trail for all production t
 CREATE OR REPLACE FUNCTION audit.log_change()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
-  INSERT INTO audit.log_change (schema_name, table_name, operation, old_data, new_data)
+  INSERT INTO audit.change_log (schema_name, table_name, operation, old_data, new_data)
   VALUES (
     TG_TABLE_SCHEMA,
     TG_TABLE_NAME,
@@ -77,7 +77,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA raw    TO etl_worker;
 
 -- === api_reader: SELECT only on public + warehouse (used by FastAPI) ===
 DO $$ BEGIN
-  IF NOT EXIST (SELECT FROM pg_roles WHERE rolname = 'api_reader') THEN 
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'api_reader') THEN 
       CREATE ROLE api_reader LOGIN PASSWORD 'change_me_in_production'; 
   END IF; 
 END $$; 

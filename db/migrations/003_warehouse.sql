@@ -31,7 +31,7 @@ SELECT
     t.qualified_teams, 
     t.attendance_total,
     ROUND(t.attendance_total::NUMERIC / NULLIF(t.matches_played, 0), 0) AS svg_attendance_per_match
-FROM public.tournament t
+FROM public.tournaments t
 ORDER BY t.year; 
 
  
@@ -54,10 +54,10 @@ SELECT
         WHEN m.home_team_initials = tm.initials AND m.home_goals > m.away_goals THEN 1
         WHEN m.away_team_initials = tm.initials AND m.away_goals > m.home_goals THEN 1
         ELSE 0 END)                                          AS wins,
-    SUM(
-        WHEN m.home_goals = m.away_goals then 1
+    SUM(CASE
+        WHEN m.home_goals = m.away_goals THEN 1
         ELSE 0 END)                                          AS draws,
-    SUM(
+    SUM(CASE
         WHEN m.home_team_initials = tm.initials AND m.home_goals < m.away_goals THEN 1
         WHEN m.away_team_initials = tm.initials AND m.away_goals < m.home_goals THEN 1
         ELSE 0 END)                                          AS losses,
@@ -71,7 +71,7 @@ SELECT
 FROM public.teams tm
 LEFT JOIN public.matches m
     ON tm.initials IN (m.home_team_initials, m.away_team_initials)
-LEFT JOIN public.tournament t
+LEFT JOIN public.tournaments t ON t.tournament_id = m.tournament_id
 GROUP BY tm.initials, tm.name
 ORDER BY titles DESC, wins DESC; 
 
@@ -92,12 +92,12 @@ SELECT
     COUNT(DISTINCT m.tournament_id)                    AS editions
 FROM public.match_players mp
 JOIN public.matches m     ON mp.match_id = m.match_id
-JOIN public.tournament t  ON m.tournament_id = t.tournament_id
+JOIN public.tournaments t ON m.tournament_id = t.tournament_id
 WHERE mp.event_code IS NOT NULL
 GROUP BY mp.player_name, mp.team_initials
 ORDER BY goals DESC;   
 
-COMMENT ON MATERIALIZED VIEW warehouse.top_scorers
+COMMENT ON MATERIALIZED VIEW warehouse.top_scored
     IS 'Dashboard: all-time goal scorers across all World Cups';
 
 
@@ -112,11 +112,11 @@ SELECT
     SUM(m.home_goals)                                       AS home_goals,
     SUM(m.away_goals)                                       AS away_goals,
     COUNT(*) FILTER (WHERE m.home_goals > m.away_goals)     AS home_wins,
-    COUNT(*) FILTER (WHERE m.away_goals > m.home_goals)     AS away_goals,
+    COUNT(*) FILTER (WHERE m.away_goals > m.home_goals)     AS away_wins,
     COUNT(*) FILTER (WHERE m.home_goals = m.away_goals)     AS draws,
     AVG(m.attendance)::INTEGER                              AS svg_attendance
-FROM public.match m 
-JOIN public.tournaments t On m.tournament_id = t.tournament_id
+FROM public.matches m
+JOIN public.tournaments t ON m.tournament_id = t.tournament_id
 GROUP BY m.stage, t.year
 ORDER BY t.year, m.stage; 
 
@@ -136,7 +136,7 @@ SELECT
     MAX(m.attendance)                                   AS max_attendance,
     MIN(m.attendance) FILTER (WHERE m.attendance > 0)   AS min_attendance,
     AVG(m.attendance)::INTEGER                          AS avg_attendance
-FROM public.tournament t
+FROM public.tournaments t
 LEFT JOIN public.matches m ON t.tournament_id = m.tournament_id
 GROUP BY t.year, t.host_country, t.qualified_teams, t.matches_played, t.attendance_total
 ORDER BY t.year; 
@@ -145,37 +145,37 @@ COMMENT ON MATERIALIZED VIEW warehouse.attendance_trends
     IS 'Dashboard: stadium attendance patterns across editions';
 
 -- ─── VIEW: Player participation (positions) ──────────────────
-CREATE MATERIALIZED VIEW IF EXISTS warehouse.player_position AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS warehouse.player_position AS
 SELECT
     mp.position, 
     mp.team_initials,
     t.year,
-    COUNT(DISTINCT mp.player_name)           AS unique_players,
-    COUNT(*) FILTER (WHERE mp.line_up = 'S') AS starts,
-    COUNT(*) FILTER (WHERE mp.line_up = 'N') AS sub,
-FROM public.matches_played mp
-JOIN public.match m             ON mp.match_id = m.match_id
+    COUNT(DISTINCT mp.player_name)                  AS unique_players,
+    COUNT(*) FILTER (WHERE mp.lineup_type = 'S')    AS starts,
+    COUNT(*) FILTER (WHERE mp.lineup_type = 'N')    AS subs
+FROM public.match_players mp
+JOIN public.matches m           ON mp.match_id = m.match_id
 JOIN public.tournaments t       ON m.tournament_id = t.tournament_id
 GROUP BY mp.position, mp.team_initials, t.year
 ORDER BY t.year, mp.position; 
 
-COMMENT ON MATERIALIZED VIEW warehouse.player_positions
+COMMENT ON MATERIALIZED VIEW warehouse.player_position
     IS 'Dashboard: player participation by position and year';
 
 
 -- ─── Refresh function (called post-ETL by W3 Load) ───────────
 CREATE OR REPLACE FUNCTION warehouse.refresh_all()
-RETURN VOID LANGUAGE plpgsql AS $$
+RETURNS VOID LANGUAGE plpgsql AS $$
 BEGIN
-    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse.goals_per_match; 
-    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse.team_performance; 
-    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse.top_scored; 
-    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse.goals_by_stage; 
-    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse.attendance_trends; 
-    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse.player_position;  
+    REFRESH MATERIALIZED VIEW warehouse.goals_per_tournament; 
+    REFRESH MATERIALIZED VIEW warehouse.team_performance; 
+    REFRESH MATERIALIZED VIEW warehouse.top_scored; 
+    REFRESH MATERIALIZED VIEW warehouse.goals_by_stage; 
+    REFRESH MATERIALIZED VIEW warehouse.attendance_trends; 
+    REFRESH MATERIALIZED VIEW warehouse.player_position;  
     RAISE NOTICE 'Warehouse view refresh at %', NOW();
 
-END:
+END;
 $$; 
 
  
