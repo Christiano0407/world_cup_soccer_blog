@@ -11,9 +11,12 @@
 -- No almacena datos físicamente, sino que guarda la definición de la consulta, lo que permite presentar datos de una o más tablas 
 -- subyacentes de forma -- simplificada y personalizada ".
 -- # ============================================================= #
--- Data Warehouse: "Un Data Warehouse (almacén de datos) es un sistema centralizado diseñado para recopilar, integrar y almacenar 
+-- # Data Warehouse: "Un Data Warehouse (almacén de datos) es un sistema centralizado diseñado para recopilar, integrar y almacenar 
 -- grandes volúmenes de datos provenientes de múltiples fuentes operativas, con el objetivo específico de facilitar el análisis, 
 -- la generación de informes y la toma de decisiones empresariales".
+-- # AVG() => "Calcular el promedio"
+-- # La cláusula DISTINCT en SQL se utiliza junto con el comando SELECT para eliminar filas duplicadas y devolver únicamente valores únicos 
+-- en el conjunto de resultados.
 -- ====================================================================================================================================
 
 -- === VIEW: Goals per Tournament === 
@@ -142,6 +145,39 @@ COMMENT ON MATERIALIZED VIEW warehouse.attendance_trends
     IS 'Dashboard: stadium attendance patterns across editions';
 
 -- ─── VIEW: Player participation (positions) ──────────────────
+CREATE MATERIALIZED VIEW IF EXISTS warehouse.player_position AS
+SELECT
+    mp.position, 
+    mp.team_initials,
+    t.year,
+    COUNT(DISTINCT mp.player_name)           AS unique_players,
+    COUNT(*) FILTER (WHERE mp.line_up = 'S') AS starts,
+    COUNT(*) FILTER (WHERE mp.line_up = 'N') AS sub,
+FROM public.matches_played mp
+JOIN public.match m             ON mp.match_id = m.match_id
+JOIN public.tournaments t       ON m.tournament_id = t.tournament_id
+GROUP BY mp.position, mp.team_initials, t.year
+ORDER BY t.year, mp.position; 
+
+COMMENT ON MATERIALIZED VIEW warehouse.player_positions
+    IS 'Dashboard: player participation by position and year';
 
 
 -- ─── Refresh function (called post-ETL by W3 Load) ───────────
+CREATE OR REPLACE FUNCTION warehouse.refresh_all()
+RETURN VOID LANGUAGE plpgsql AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse.goals_per_match; 
+    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse.team_performance; 
+    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse.top_scored; 
+    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse.goals_by_stage; 
+    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse.attendance_trends; 
+    REFRESH MATERIALIZED VIEW CONCURRENTLY warehouse.player_position;  
+    RAISE NOTICE 'Warehouse view refresh at %', NOW();
+
+END:
+$$; 
+
+ 
+COMMENT ON FUNCTION warehouse.refresh_all IS
+    'Call after each ETL load cycle to refresh all materialized views';
