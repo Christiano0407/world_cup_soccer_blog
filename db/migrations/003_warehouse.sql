@@ -99,6 +99,26 @@ COMMENT ON MATERIALIZED VIEW warehouse.top_scorers
 
 
 -- ─── VIEW: Goals by match stage ──────────────────────────────
+CREATE MATERIALIZED VIEW IF NOT EXISTS warehouse.goals_by_stage AS 
+SELECT
+    m.stage,
+    t.year,
+    COUNT(m.match_id)                                       AS matches,
+    SUM(m.home_goals + m.away_goals)                        AS total_goals,
+    ROUND(AVG(m.home_goals + m.away_goals)::NUMERIC, 2)     AS avg_goals,
+    SUM(m.home_goals)                                       AS home_goals,
+    SUM(m.away_goals)                                       AS away_goals,
+    COUNT(*) FILTER (WHERE m.home_goals > m.away_goals)     AS home_wins,
+    COUNT(*) FILTER (WHERE m.away_goals > m.home_goals)     AS away_goals,
+    COUNT(*) FILTER (WHERE m.home_goals = m.away_goals)     AS draws,
+    AVG(m.attendance)::INTEGER                              AS svg_attendance
+FROM public.match m 
+JOIN public.tournaments t On m.tournament_id = t.tournament_id
+GROUP BY m.stage, t.year
+ORDER BY t.year, m.stage; 
+
+COMMENT ON MATERIALIZED VIEW warehouse.goals_by_stage
+    IS 'Dashboard: scoring and results breakdown by stage';
 
 
 -- ─── VIEW: Attendance trends ─────────────────────────────────
