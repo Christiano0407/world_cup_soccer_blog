@@ -40,7 +40,12 @@ def run_clean() -> None:
 
 def run_load() -> None:
     """W3: Transform + load public.* + export Parquet."""
-    print("W3: Load pipeline — not yet implemented")
+    import asyncio
+
+    from worker.core.config import settings
+    from worker.loading.load_w3 import load_all
+
+    asyncio.run(load_all(settings))
 
 
 def run_analysis() -> None:
