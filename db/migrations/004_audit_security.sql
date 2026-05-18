@@ -7,6 +7,9 @@
 -- ## ================================================================ ##
 -- COALESCE: "La función COALESCE en SQL devuelve el primer valor no nulo de una lista de expresiones 
 -- evaluadas secuencialmente.  Si todos los argumentos proporcionados son nulos, la función devuelve NULL".
+-- # SEQUENCES: "Una secuencia SQL es un objeto de base de datos independiente que genera una serie de números enteros únicos en orden ascendente o descendente.# --
+-- # GRANT: "El comando GRANT en SQL es una sentencia de control de acceso que permite a los administradores conceder privilegios específicos 
+-- a usuarios o roles sobre objetos de la base de datos, como tablas, vistas o esquemas" # --
 -- =============================================================
 
 
@@ -56,10 +59,36 @@ CREATE OR REPLACE TRIGGER trg_audit_users
 
 
 -- ─── SECURITY: DB Roles ───────────────────────────────────────
-
 -- === etl_worker: write access to raw + public, no access to audit ===
 
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'etl_worker') THEN
+      CREATE ROLE etl_worker LOGIN PASSWORD 'change_me_in_production'; 
+  END IF;
+END $$; 
+
+GRANT USAGE ON SCHEMA raw    TO etl_worker;
+GRANT USAGE ON SCHEMA public TO etl_worker;
+GRANT INSERT, SELECT, UPDATE ON ALL TABLES IN SCHEMA raw    TO etl_worker;
+GRANT INSERT, SELECT         ON ALL TABLES IN SCHEMA public TO etl_worker;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO etl_worker;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA raw    TO etl_worker;
+ 
 
 -- === api_reader: SELECT only on public + warehouse (used by FastAPI) ===
+DO $$ BEGIN
+  IF NOT EXIST (SELECT FROM pg_roles WHERE rolname = 'api_reader') THEN 
+      CREATE ROLE api_reader LOGIN PASSWORD 'change_me_in_production'; 
+  END IF; 
+END $$; 
+GRANT USAGE  ON SCHEMA public    TO api_reader;
+GRANT USAGE  ON SCHEMA warehouse TO api_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA public    TO api_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA warehouse TO api_reader;
+
 
 -- === Revoke public schema default access ===
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+ 
+COMMENT ON ROLE etl_worker IS 'ETL pipeline — write to raw + public only';
+COMMENT ON ROLE api_reader IS 'FastAPI backend — read-only on public + warehouse';
