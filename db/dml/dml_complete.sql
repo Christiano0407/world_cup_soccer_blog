@@ -18,3 +18,52 @@
 -- ─── === 1.1 Equipos históricos del Mundial === ─────────────────────────
 -- Cubre todos los equipos que aparecen en los 3 datasets CSV.
 -- initials = código de 3 letras del CSV (puede diferir del FIFA actual)
+
+INSERT INTO public.teams (initials, name, confederation, fifa_code, active)
+VALUES 
+  ('URU', 'Uruguay',            'CONMEBOL', 'URU', TRUE),
+  ('ARG', 'Argentina',          'CONMEBOL', 'ARG', TRUE),
+  ('USA', 'United States',      'CONCACAF', 'USA', TRUE),
+  ('YUG', 'Yugoslavia',         'UEFA',     NULL,  FALSE),  -- disuelta 1992
+  ('ITA', 'Italy',              'UEFA',     'ITA', TRUE),
+  ('CZE', 'Czechoslovakia',     'UEFA',     NULL,  FALSE),  -- disuelta 1993
+  ('GER', 'Germany',            'UEFA',     'GER', TRUE),
+  ('AUT', 'Austria',            'UEFA',     'AUT', TRUE),
+  ('HUN', 'Hungary',            'UEFA',     'HUN', TRUE),
+  ('FRA', 'France',             'UEFA',     'FRA', TRUE),
+  ('SWE', 'Sweden',             'UEFA',     'SWE', TRUE),
+  ('BRA', 'Brazil',             'CONMEBOL', 'BRA', TRUE),
+  ('ESP', 'Spain',              'UEFA',     'ESP', TRUE),
+  ('CHI', 'Chile',              'CONMEBOL', 'CHI', TRUE),
+  ('ENG', 'England',            'UEFA',     'ENG', TRUE),
+  ('POR', 'Portugal',           'UEFA',     'POR', TRUE),
+  ('URS', 'Soviet Union',       'UEFA',     NULL,  FALSE),  -- disuelta 1991
+  ('MEX', 'Mexico',             'CONCACAF', 'MEX', TRUE),
+  ('NED', 'Netherlands',        'UEFA',     'NED', TRUE),
+  ('POL', 'Poland',             'UEFA',     'POL', TRUE),
+  ('SUI', 'Switzerland',        'UEFA',     'SUI', TRUE),
+  ('BEL', 'Belgium',            'UEFA',     'BEL', TRUE),
+  ('BUL', 'Bulgaria',           'UEFA',     'BUL', TRUE),
+  ('CRO', 'Croatia',            'UEFA',     'CRO', TRUE),
+  ('TUR', 'Turkey',             'UEFA',     'TUR', TRUE),
+  ('KOR', 'South Korea',        'AFC',      'KOR', TRUE),
+  ('MAR', 'Morocco',            'CAF',      'MAR', TRUE),
+  ('SEN', 'Senegal',            'CAF',      'SEN', TRUE),
+  ('GHA', 'Ghana',              'CAF',      'GHA', TRUE),
+  ('CMR', 'Cameroon',           'CAF',      'CMR', TRUE),
+  ('AUS', 'Australia',          'AFC',      'AUS', TRUE),
+  ('JPN', 'Japan',              'AFC',      'JPN', TRUE),
+  ('CRC', 'Costa Rica',         'CONCACAF', 'CRC', TRUE),
+  ('QAT', 'Qatar',              'AFC',      'QAT', TRUE)
+ON CONFLICT (initials) DO NOTHING; 
+
+-- ─── === 1.2 Árbitros históricos (muestra — ETL completa el resto) === ──
+INSERT INTO public.referee (full_name, country_code, role)
+VALUES
+  ('LOMBARDI Domingo (URU)',          'URU', 'main'),
+  ('CRISTOPHE Henry (BEL)',           'BEL', 'assistant'),
+  ('REGO Gilberto (BRA)',             'BRA', 'assistant'),
+  ('MACIAS Jose (ARG)',               'ARG', 'main'),
+  ('MATEUCCI Francisco (URU)',        'URU', 'assistant'),
+  ('WARNKEN Alberto (CHI)',           'CHI', 'assistant')
+ON CONFLICT (full_name) DO NOTHING; 
