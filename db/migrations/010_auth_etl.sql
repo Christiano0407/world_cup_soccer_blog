@@ -1,4 +1,4 @@
 -- ================================================================
 --  ===== FIFA World Cup Platform ===== 
--- AUTH Refresh Tokens | ETL & Log | Password | 
+-- AUTH Refresh Tokens | ETL & Log | Password 
 -- ================================================================
