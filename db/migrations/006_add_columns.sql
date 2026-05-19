@@ -1,6 +1,10 @@
--- ## ========================================== ## --
+-- ## ========================================== ## ========================================== ## --
 -- # Agregar Columnas que faltan dentro de nuestras tablas de datos 
--- ## ========================================== ## --
+-- # =========================================== # 
+-- " La cláusula ON DELETE RESTRICT en SQL es una regla de integridad referencial que impide la eliminación de una fila 
+--   en una tabla padre si existen filas relacionadas en una tabla hija.  Esta restricción protege la consistencia de los datos al evitar 
+--   que se eliminen registros principales mientras sean referenciados por otros registros secundarios".
+-- ## ========================================== ## ========================================== ## --
 
 -- ----------- Table: public.teams -------------
 ALTER TABLE public.teams 
@@ -26,9 +30,14 @@ ALTER TABLE public.matches
   ADD COLUMN IF NOT EXISTS assistant_2_id INTEGER REFERENCES public.referees(referee_id) ON DELETE SET NULL, 
   ADD COLUMN IF NOT EXISTS stadium_id     INTEGER REFERENCES public.stadium(stadium_id)  ON DELETE SET NULL; 
 
-
 -- ----------- Table: public.matches_players -------------
-
+ALTER TABLE public.match_players
+  ADD COLUMN IF NOT EXISTS player_id      INTEGER REFERENCES public.player(player_id) ON DELETE SET NULL; 
 
 -- ----------- Table: public.tournaments -------------
+ALTER TABLE public.tournaments
+  ADD COLUMN IF NOT EXISTS  winner_team_id     INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT,
+  ADD COLUMN IF NOT EXISTS  runners_up_team_id INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT, 
+  ADD COLUMN IF NOT EXISTS  third_team_id      INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT,
+  ADD COLUMN IF NOT EXISTS  fourth_place_id    INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT; 
 
