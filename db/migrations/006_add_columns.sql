@@ -23,17 +23,6 @@ ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS email_verified       BOOLEAN NOT NULL DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS email_verified_at    TIMESTAMPTZ; 
 
--- ----------- Table: public.matches -------------
-ALTER TABLE public.matches
-  ADD COLUMN IF NOT EXISTS referee_id     INTEGER REFERENCES public.referees(referee_id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS assistant_1_id INTEGER REFERENCES public.referees(referee_id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS assistant_2_id INTEGER REFERENCES public.referees(referee_id) ON DELETE SET NULL, 
-  ADD COLUMN IF NOT EXISTS stadium_id     INTEGER REFERENCES public.stadium(stadium_id)  ON DELETE SET NULL; 
-
--- ----------- Table: public.matches_players -------------
-ALTER TABLE public.match_players
-  ADD COLUMN IF NOT EXISTS player_id      INTEGER REFERENCES public.player(player_id) ON DELETE SET NULL; 
-
 -- ----------- Table: public.tournaments -------------
 ALTER TABLE public.tournaments
   ADD COLUMN IF NOT EXISTS  winner_team_id     INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT,
