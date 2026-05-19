@@ -15,3 +15,6 @@
 -- Seeds son idempotentes: ON CONFLICT DO NOTHING siempre.
 -- ════════════════════════════════════════════════════════════════
  
+-- ─── === 1.1 Equipos históricos del Mundial === ─────────────────────────
+-- Cubre todos los equipos que aparecen en los 3 datasets CSV.
+-- initials = código de 3 letras del CSV (puede diferir del FIFA actual)
