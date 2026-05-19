@@ -69,7 +69,6 @@ CREATE TABLE IF NOT EXISTS public.matches (
     stage               VARCHAR(60)     NOT NULL,
     stadium             VARCHAR(120),
     city                VARCHAR(100),
-
     home_team_initials  CHAR(3)         NOT NULL,
     away_team_initials  CHAR(3)         NOT NULL,
     home_goals          SMALLINT        NOT NULL,
