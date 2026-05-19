@@ -23,10 +23,4 @@ ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS email_verified       BOOLEAN NOT NULL DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS email_verified_at    TIMESTAMPTZ; 
 
--- ----------- Table: public.tournaments -------------
-ALTER TABLE public.tournaments
-  ADD COLUMN IF NOT EXISTS  winner_team_id     INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT,
-  ADD COLUMN IF NOT EXISTS  runners_up_team_id INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT, 
-  ADD COLUMN IF NOT EXISTS  third_team_id      INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT,
-  ADD COLUMN IF NOT EXISTS  fourth_place_id    INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT; 
 
