@@ -28,6 +28,28 @@ CREATE TABLE IF NOT EXISTS public.auth_refresh_tokens(
 ); 
 
 -- Auth Password Reset --
+CREATE TABLE IF NOT EXISTS public.auth_password_resets(
+  reset_id    BIGSERIAL     PRIMARY KEY,
+  user_id     UUID          NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
+  token_hash  VARCHAR(64)   NOT NULL,
+  created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  expired_at  TIMESTAMPTZ    NOT NULL,
+  used_at     TIMESTAMPTZ
+); 
 
 
 -- ETL Run Log --
+CREATE TABLE IF NOT EXISTS public.etl_run_log(
+  run_id        BIGSERIAL     PRIMARY KEY,
+  dataset       VARCHAR(20)   NOT NULL,
+  worker        VARCHAR(20)   NOT NULL,
+  status        VARCHAR(20)   NOT NULL DEFAULT 'running',
+  triggered_at  VARCHAR(50)  DEFAULT 'scheduler',
+  started_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  finished_at   TIMESTAMPTZ,
+  rows_read     INTEGER,
+  rows_valid    INTEGER,
+  rows_rejected INTEGER,
+  rows_loaded   INTEGER,
+  minio_parquet_key VARCHAR(255)
+); 
