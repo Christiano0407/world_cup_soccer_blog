@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS public.referees(
 ); 
 
 -- stadium 
-CREATE TABLE IF NOT EXISTS public.stadium(
+CREATE TABLE IF NOT EXISTS public.stadiums(
   stadium_id    SERIAL        PRIMARY KEY,
   name          VARCHAR(150)  NOT NULL,
   city          VARCHAR(100),
@@ -27,4 +27,4 @@ ALTER TABLE public.matches
   ADD COLUMN IF NOT EXISTS referee_id     INTEGER REFERENCES public.referees(referee_id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS assistant_1_id INTEGER REFERENCES public.referees(referee_id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS assistant_2_id INTEGER REFERENCES public.referees(referee_id) ON DELETE SET NULL, 
-  ADD COLUMN IF NOT EXISTS stadium_id     INTEGER REFERENCES public.stadium(stadium_id)  ON DELETE SET NULL; 
+  ADD COLUMN IF NOT EXISTS stadium_id     INTEGER REFERENCES public.stadiums(stadium_id)  ON DELETE SET NULL; 

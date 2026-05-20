@@ -24,9 +24,9 @@ VALUES
   ('URU', 'Uruguay',            'CONMEBOL', 'URU', TRUE),
   ('ARG', 'Argentina',          'CONMEBOL', 'ARG', TRUE),
   ('USA', 'United States',      'CONCACAF', 'USA', TRUE),
-  ('YUG', 'Yugoslavia',         'UEFA',     NULL,  FALSE),  -- disuelta 1992
+  ('YUG', 'Yugoslavia',         'UEFA',     NULL,  FALSE),
   ('ITA', 'Italy',              'UEFA',     'ITA', TRUE),
-  ('CZE', 'Czechoslovakia',     'UEFA',     NULL,  FALSE),  -- disuelta 1993
+  ('TCH', 'Czechoslovakia',     'UEFA',     NULL,  FALSE),  -- CZE→TCH, disuelta 1993
   ('GER', 'Germany',            'UEFA',     'GER', TRUE),
   ('AUT', 'Austria',            'UEFA',     'AUT', TRUE),
   ('HUN', 'Hungary',            'UEFA',     'HUN', TRUE),
@@ -37,7 +37,7 @@ VALUES
   ('CHI', 'Chile',              'CONMEBOL', 'CHI', TRUE),
   ('ENG', 'England',            'UEFA',     'ENG', TRUE),
   ('POR', 'Portugal',           'UEFA',     'POR', TRUE),
-  ('URS', 'Soviet Union',       'UEFA',     NULL,  FALSE),  -- disuelta 1991
+  ('URS', 'Soviet Union',       'UEFA',     NULL,  FALSE),
   ('MEX', 'Mexico',             'CONCACAF', 'MEX', TRUE),
   ('NED', 'Netherlands',        'UEFA',     'NED', TRUE),
   ('POL', 'Poland',             'UEFA',     'POL', TRUE),
@@ -67,3 +67,17 @@ VALUES
   ('MATEUCCI Francisco (URU)',        'URU', 'assistant'),
   ('WARNKEN Alberto (CHI)',           'CHI', 'assistant')
 ON CONFLICT (full_name) DO NOTHING; 
+
+-- 1.3 Estadios (tabla creada en 007_referees_stadiums.sql)
+INSERT INTO public.stadiums (name, city, country, capacity)
+VALUES
+  ('Pocitos',               'Montevideo',   'Uruguay',   20000),
+  ('Parque Central',        'Montevideo',   'Uruguay',   22000),
+  ('Centenario',            'Montevideo',   'Uruguay',   65000),
+  ('Wembley Stadium',       'London',       'England',   90000),
+  ('Maracanã',              'Rio de Janeiro','Brazil',  78000),
+  ('Azteca',                'Mexico City',  'Mexico',   87000),
+  ('San Siro',              'Milan',        'Italy',     80000),
+  ('Lusail Stadium',        'Lusail',       'Qatar',     89000),
+  ('Khalifa International', 'Doha',         'Qatar',     45000)
+ON CONFLICT (name, city) DO NOTHING; 
