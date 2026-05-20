@@ -17,7 +17,7 @@ def run_ingest() -> None:
 
     async def _run() -> None:
         for ds in datasets:
-            files = list(source.glob(f"{ds}*.csv"))
+            files = list(source.glob(f"*{ds}*.csv"))
             for f in files:
                 await ingest_csv(f, ds, settings)
 
