@@ -63,7 +63,7 @@ VALUES
 ON CONFLICT (initials) DO NOTHING; 
 
 -- ─── === 1.2 Árbitros históricos (muestra — ETL completa el resto) === ──
-INSERT INTO public.referee (full_name, country_code, role)
+INSERT INTO public.referees (full_name, country_code, role)
 VALUES
   ('LOMBARDI Domingo (URU)',          'URU', 'main'),
   ('CRISTOPHE Henry (BEL)',           'BEL', 'assistant'),
@@ -98,13 +98,13 @@ ON CONFLICT (name, city) DO NOTHING;
 -- ON CONFLICT (year) DO UPDATE: si el CSV se re-procesa, actualiza. | Nunca actualizar datos que no cambian --
 -- Nunca actualizar datos que no cambian
 INSERT INTO public.tournaments(
-  year, host_country, winner, runner_ups, 
+  year, host_country, winner, runners_up, 
   third_place, fourth_place, 
   goals_scored, qualified_teams, 
   matches_played, attendance_total
 )
 VALUES (
-  1930,Uruguay,Uruguay,Argentina,USA,Yugoslavia,70,13,18,590.549
+  1930, 'Uruguay', 'Uruguay', 'Argentina', 'USA', 'Yugoslavia', 70, 13, 18, 590549
 )
 ON CONFLICT (year) DO UPDATE SET 
   winner            = EXCLUDED.winner,
@@ -112,6 +112,17 @@ ON CONFLICT (year) DO UPDATE SET
   goals_scored      = EXCLUDED.goals_scored,
   attendance_total  = EXCLUDED.attendance_total,
   host_country      = EXCLUDED.host_country; 
+
+
+-- ─── 2.1.5 INSERT ronda (rounds) ────────────────────────────────
+-- Necesaria para la FK de matches.
+INSERT INTO public.rounds (round_id, tournament_id, round_name)
+VALUES (
+  201,
+  (SELECT tournament_id FROM public.tournaments WHERE year = 1930),
+  'Group 1'
+)
+ON CONFLICT (round_id) DO NOTHING;
 
 
 -- ─── 2.2 INSERT partido (matches) ───────────────────────────────
@@ -150,22 +161,21 @@ INSERT INTO public.match_players(
   coach_name, lineup_type, shirt_number,
   player_name, position, event_code
 )
-SELECT (
-      1096, 201, 'FRA',
-      'CAUDRON Raoul (FRA)', 'S', NULL,
-      'Alex THEPOT', 'GK', NULL)
-WHERE NOT EXISTS(
-      SELECT 1 FROM public.match_players
-      WHERE match_id = 1069
-        AND team_initials = 'FRA',
-        AND player_name = 'Alex THEPOT',
-        AND line_up = '5'
-      ); 
+SELECT 1096, 201, 'FRA',
+       'CAUDRON Raoul (FRA)', 'S', NULL,
+       'Alex THEPOT', 'GK', NULL
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.match_players
+  WHERE match_id = 1096
+    AND team_initials = 'FRA'
+    AND player_name = 'Alex THEPOT'
+    AND lineup_type = 'S'
+); 
 
 -- ─── 2.4 INSERT participación de equipo en torneo ───────────────
 INSERT INTO public.tournament_teams(
   tournament_id, team_initials, finish_position, 
-  matches_played, wins, draw, losses,
+  matches_played, wins, draws, losses,
   goals_for, goals_against
 )
 VALUES(
@@ -175,7 +185,7 @@ VALUES(
 ON CONFLICT (tournament_id, team_initials) DO UPDATE SET 
     finish_position = EXCLUDED.finish_position,
     wins            = EXCLUDED.wins, 
-    draw            = EXCLUDED.draw, 
+    draws           = EXCLUDED.draws, 
     losses          = EXCLUDED.losses, 
     goals_for       = EXCLUDED.goals_for, 
     goals_against   = EXCLUDED.goals_against;  
@@ -209,31 +219,31 @@ RETURNING user_id, email, role, created_at;
 
 -- ─── 2.7 INSERT refresh token (login/register) ──────────────────
 INSERT INTO public.auth_refresh_tokens(
-  token_hash, user_id, expired_at, issued_at
+  token_hash, user_id, expires_at, issued_from_ip
 )
-VALUES (
+SELECT
     encode(sha256('token_raw_aqui'), 'hex'),
-    '00000000-0000-0000-0000-000000000001',
+    user_id,
     NOW() + INTERVAL '7 days',
     '192.168.1.1'::INET
-); 
+FROM public.users WHERE email = 'user@example.com'; 
 
 -- ─── 2.8 INSERT password reset token ────────────────────────────
 INSERT INTO public.auth_password_resets(
-  user_id, token_hash, expired_at
+  user_id, token_hash, expires_at
 )
-VALUES (
-    '00000000-0000-0000-0000-000000000001',
+SELECT
+    user_id,
     encode(sha256('reset_token_raw'), 'hex'),
     NOW() + INTERVAL '15 minutes'
-); 
+FROM public.users WHERE email = 'user@example.com'; 
 
 -- ─── 2.9 INSERT ETL run log (inicio de pipeline) ────────────────
 INSERT INTO public.etl_run_log(
-  datasets, worker, status, triggered_at
+  dataset, worker, status, triggered_by
 )
 VALUES(
-  'wc_winners', "load_w3", 'running', 'scheduler'
+  'winners', 'load_w3', 'running', 'scheduler'
 )
 RETURNING run_id; 
 -- W3 luego hace UPDATE con rows_loaded, finished_at, status='success'

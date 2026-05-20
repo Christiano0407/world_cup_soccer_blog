@@ -142,7 +142,7 @@ DIMENSIONS_PATTERN: str = r"^\d+(\.\d+)?[xX]\d+(\.\d+)?[xX]\d+(\.\d+)?$"
 # ── Patrones de validación ────────────────────────────────────
 # ─────────────────────────────────────────────────────────────────────────────
 ### ---- Posiciones válidas en el CSV de players
-VALID_POSITIONS: frozenset[str] = frozenset({"GK", "DF", "MF", "FW"})
+VALID_POSITIONS: frozenset[str] = frozenset({"GK", "DF", "MF", "FW", "C"})
  
 ### ---- Tipos de alineación válidos
 VALID_LINEUP_TYPES: frozenset[str] = frozenset({"S", "N"})

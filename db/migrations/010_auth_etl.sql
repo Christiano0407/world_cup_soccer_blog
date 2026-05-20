@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS public.auth_refresh_tokens(
   token_hash    VARCHAR(64)   NOT NULL,
   user_id       UUID          NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE, 
   issued_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-  expired_at    TIMESTAMPTZ   NOT NULL,
+  expires_at    TIMESTAMPTZ   NOT NULL,
   revoked_at    TIMESTAMPTZ,
   revoke_reason VARCHAR(50),
   issued_from_ip INET, 
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS public.auth_password_resets(
   user_id     UUID          NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
   token_hash  VARCHAR(64)   NOT NULL,
   created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-  expired_at  TIMESTAMPTZ    NOT NULL,
+  expires_at  TIMESTAMPTZ    NOT NULL,
   used_at     TIMESTAMPTZ
 ); 
 
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS public.etl_run_log(
   dataset       VARCHAR(20)   NOT NULL,
   worker        VARCHAR(20)   NOT NULL,
   status        VARCHAR(20)   NOT NULL DEFAULT 'running',
-  triggered_at  VARCHAR(50)  DEFAULT 'scheduler',
+  triggered_by  VARCHAR(50)  DEFAULT 'scheduler',
   started_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   finished_at   TIMESTAMPTZ,
   rows_read     INTEGER,

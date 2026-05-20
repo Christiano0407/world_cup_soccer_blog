@@ -3,7 +3,7 @@
 -- players entity Tables
 -- ================================================================
 
-CREATE TABLE IF NOT EXISTS public.player(
+CREATE TABLE IF NOT EXISTS public.players(
   player_id     SERIAL        PRIMARY KEY,
   full_name     VARCHAR(160)  NOT NULL,
   known_as      VARCHAR(80),
@@ -15,4 +15,4 @@ CREATE TABLE IF NOT EXISTS public.player(
 
 -- ----------- Table: public.matches_players -------------
 ALTER TABLE public.match_players
-  ADD COLUMN IF NOT EXISTS player_id   INTEGER REFERENCES public.player(player_id) ON DELETE SET NULL; 
+  ADD COLUMN IF NOT EXISTS player_id   INTEGER REFERENCES public.players(player_id) ON DELETE SET NULL; 

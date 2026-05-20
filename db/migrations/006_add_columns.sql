@@ -22,6 +22,18 @@ ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS last_login_at        TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS last_login_ip        INET,
   ADD COLUMN IF NOT EXISTS email_verified       BOOLEAN NOT NULL DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS email_verified_at    TIMESTAMPTZ; 
+  ADD COLUMN IF NOT EXISTS email_verified_at    TIMESTAMPTZ;
+
+-- ----------- Table: public.tournaments -------------
+ALTER TABLE public.tournaments
+  ADD COLUMN IF NOT EXISTS  winner_team_id     INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT,
+  ADD COLUMN IF NOT EXISTS  runners_up_team_id INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT,
+  ADD COLUMN IF NOT EXISTS  third_team_id      INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT,
+  ADD COLUMN IF NOT EXISTS  fourth_team_id     INTEGER REFERENCES public.teams(team_id) ON DELETE RESTRICT;
+
+-- ----------- Table: public.match_players (fix CHECK position) -------------
+ALTER TABLE public.match_players DROP CONSTRAINT IF EXISTS chk_position;
+ALTER TABLE public.match_players ADD CONSTRAINT chk_position
+    CHECK (position IS NULL OR position IN ('GK','DF','MF','FW','C')); 
 
 

@@ -11,8 +11,10 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - ./db/scripts/run_migrations.sh:/docker-entrypoint-initdb.d/run_migrations.sh:ro
+      - ./db/scripts/run_migrations.sh:/docker-entrypoint-initdb.d/01-run_migrations.sh:ro
+      - ./db/scripts/run_dml.sh:/docker-entrypoint-initdb.d/02-run_dml.sh:ro
       - ./db/migrations:/migrations:ro
+      - ./db/dml:/dml:ro
       - postgres_data:/var/lib/postgresql/data
     networks:
       - data_world_network

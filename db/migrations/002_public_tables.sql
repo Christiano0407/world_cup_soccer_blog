@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS public.match_players (
     CONSTRAINT chk_lineup_type
         CHECK (lineup_type IN ('S', 'N')),
     CONSTRAINT chk_position
-        CHECK (position IS NULL OR position IN ('GK','DF','MF','FW')),
+        CHECK (position IS NULL OR position IN ('GK','DF','MF','FW','C')),
     CONSTRAINT chk_shirt
         CHECK (shirt_number IS NULL OR shirt_number >= 0)
 );
