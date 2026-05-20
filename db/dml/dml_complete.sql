@@ -243,8 +243,27 @@ RETURNING run_id;
 -- SECCIÓN 3 — UPDATES DE NEGOCIO
 -- ════════════════════════════════════════════════════════════════
 
+-- ─── 3.1 Cerrar un run ETL (W3 lo llama al finalizar) ───────────
 
+-- ─── 3.2 Vincular FK de árbitro normalizado a partido ───────────
 
+-- ─── 3.3 Vincular FK de estadio normalizado a partido ───────────
+
+-- ─── 3.4 Vincular player_id en match_players (post-seed players) ─
+
+-- ─── 3.5 Actualizar FKs de campeones en tournaments ─────────────
+
+-- ─── 3.6 Bloquear usuario por intentos fallidos (API Auth) ───────
+
+-- ─── 3.7 Reset contador en login exitoso ────────────────────────
+
+-- ─── 3.8 Revocar refresh token (logout) ─────────────────────────
+
+-- ─── 3.9 Marcar password reset como usado ───────────────────────
+
+-- ─── 3.10 Modificar role de usuario (admin) ─────────────────────
+
+-- ─── 3.11 Verificar email de usuario ────────────────────────────
 
 -- ════════════════════════════════════════════════════════════════
 -- SECCIÓN 4 — DELETES (con política explícita)
