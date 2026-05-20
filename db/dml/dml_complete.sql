@@ -8,6 +8,10 @@
 --             Toda query usa parámetros nombrados ($1, $2, :param)
 -- Orden     : Seeds → Inserts → Upserts → Updates → Deletes → Purges
 -- attendance: Asistentes
+-- ## =============================================================== ##
+-- ON CONFLICT en PostgreSQL permite manejar inserciones que violarían una restricción única o de clave primaria.
+-- ON CONFLICT: "Esto evita errores de duplicidad y permite actualizar datos automáticamente si ya existen. 
+--  |  no se inserta un nuevo registro, sino que se actualizan los campos existentes con los nuevos valores (los definidos en SET)"
 -- ================================================================ ##### ================================================================
  
  
@@ -157,6 +161,82 @@ WHERE NOT EXISTS(
         AND player_name = 'Alex THEPOT',
         AND line_up = '5'
       ); 
+
+-- ─── 2.4 INSERT participación de equipo en torneo ───────────────
+INSERT INTO public.tournament_teams(
+  tournament_id, team_initials, finish_position, 
+  matches_played, wins, draw, losses,
+  goals_for, goals_against
+)
+VALUES(
+  (SELECT tournament_id FROM public.tournaments WHERE year = 1930),
+  'URU', 1, 4, 4, 0, 0, 15, 3
+)
+ON CONFLICT (tournament_id, team_initials) DO UPDATE SET 
+    finish_position = EXCLUDED.finish_position,
+    wins            = EXCLUDED.wins, 
+    draw            = EXCLUDED.draw, 
+    losses          = EXCLUDED.losses, 
+    goals_for       = EXCLUDED.goals_for, 
+    goals_against   = EXCLUDED.goals_against;  
+
+ 
+-- ─── 2.5 INSERT jugador (entidad normalizada) ───────────────────
+INSERT INTO public.players (
+    full_name, known_as, primary_team, usual_position, created_from
+)
+VALUES (
+   'Alex THEPOT', 'THEPOT', 'FRA', 'GK', 'etl_csv'
+)
+ON CONFLICT (full_name, primary_team) DO NOTHING;
+
+
+-- ─── 2.6 INSERT usuario (registro desde landing page) ───────────
+-- La API llama este INSERT via asyncpg con parámetros $1..$N.
+-- Aquí como referencia del patrón.
+INSERT INTO public.users(
+  email, password_hash, display_name, role
+)
+VALUES (
+  'user@example.com',
+  '$argon2id$v=19$m=65536,t=3,p=4$...hash_aqui...',
+  'Fan del Mundial',
+  'reader'
+)
+ON CONFLICT (email) DO NOTHING
+RETURNING user_id, email, role, created_at; 
+
+
+-- ─── 2.7 INSERT refresh token (login/register) ──────────────────
+INSERT INTO public.auth_refresh_tokens(
+  token_hash, user_id, expired_at, issued_at
+)
+VALUES (
+    encode(sha256('token_raw_aqui'), 'hex'),
+    '00000000-0000-0000-0000-000000000001',
+    NOW() + INTERVAL '7 days',
+    '192.168.1.1'::INET
+); 
+
+-- ─── 2.8 INSERT password reset token ────────────────────────────
+INSERT INTO public.auth_password_resets(
+  user_id, token_hash, expired_at
+)
+VALUES (
+    '00000000-0000-0000-0000-000000000001',
+    encode(sha256('reset_token_raw'), 'hex'),
+    NOW() + INTERVAL '15 minutes'
+); 
+
+-- ─── 2.9 INSERT ETL run log (inicio de pipeline) ────────────────
+INSERT INTO public.etl_run_log(
+  datasets, worker, status, triggered_at
+)
+VALUES(
+  'wc_winners', "load_w3", 'running', 'scheduler'
+)
+RETURNING run_id; 
+-- W3 luego hace UPDATE con rows_loaded, finished_at, status='success'
 
 
 -- ════════════════════════════════════════════════════════════════
