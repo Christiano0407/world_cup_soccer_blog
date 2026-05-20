@@ -1,9 +1,10 @@
 -- ## ========================================== ## ========================================== ## --
 -- # Agregar Columnas que faltan dentro de nuestras tablas de datos 
 -- # =========================================== # 
--- " La cláusula ON DELETE RESTRICT en SQL es una regla de integridad referencial que impide la eliminación de una fila 
+-- RESTRICT: " La cláusula ON DELETE RESTRICT en SQL es una regla de integridad referencial que impide la eliminación de una fila 
 --   en una tabla padre si existen filas relacionadas en una tabla hija.  Esta restricción protege la consistencia de los datos al evitar 
 --   que se eliminen registros principales mientras sean referenciados por otros registros secundarios".
+-- INET: "El tipo de dato INET en bases de datos como PostgreSQL se utiliza para almacenar direcciones de red, específicamente:"
 -- ## ========================================== ## ========================================== ## --
 
 -- ----------- Table: public.teams -------------
