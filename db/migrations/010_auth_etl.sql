@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS public.auth_password_resets(
 ); 
 
 
--- ETL Run Log --
+-- etl_run_log --
 CREATE TABLE IF NOT EXISTS public.etl_run_log(
   run_id        BIGSERIAL     PRIMARY KEY,
   dataset       VARCHAR(20)   NOT NULL,
@@ -53,3 +53,6 @@ CREATE TABLE IF NOT EXISTS public.etl_run_log(
   rows_loaded   INTEGER,
   minio_parquet_key VARCHAR(255)
 ); 
+
+-- índices para Búsquedas comúnes en etl_run_log --
+CREATE INDEX IF NOT EXISTS idx_etl_dataset_status ON public.etl_run_log (dataset, status); 
