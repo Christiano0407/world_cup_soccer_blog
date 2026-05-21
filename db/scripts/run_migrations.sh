@@ -8,7 +8,7 @@
 #
 # Usage (via docker-compose):
 #   PostgreSQL executes this automatically on first boot.
-#   To re-run: docker compose exec postgres bash /migrations/run_migrations.sh
+#   To re-run: docker compose exec postgres bash /docker-entrypoint-initdb.d/01-run_migrations.sh
 #
 # Anti SQLi: All queries use parameterized execution in app code.
 #            This script only runs DDL — no dynamic SQL.
