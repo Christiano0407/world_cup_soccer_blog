@@ -378,6 +378,40 @@ uv run pytest -v --cov=worker
 
 ---
 
+## Test Architecture
+
+Los tests de este proyecto residen dentro de `workers/tests/` y **no** en una carpeta raíz `tests/`. Esta decisión es intencional y responde a las siguientes razones:
+
+| Razón | Explicación |
+|---|---|
+| **Aislamiento del dominio** | Los workers son el único componente con procesos ETL que requieren tests estructurales. El backend, frontend, y base de datos tienen sus propias validaciones (contrato OpenAPI, DDL checksums, etc.) que no necesitan un suite de tests unificado. |
+| **Descubrimiento automático** | `workers/pyproject.toml` define `testpaths = ["tests"]`. Al estar dentro del mismo directorio que el código que prueban, `pytest` descubre tests sin configuración extra ni `PYTHONPATH` manual. |
+| **Cohesión con el package manager** | `uv sync` y `uv run pytest` operan desde `workers/`. Tener los tests fuera obligaría a rutas relativas tipo `../workers/src/` o symlinks, añadiendo fricción al flujo de desarrollo. |
+| **Cobertura precisa** | `--cov=worker` apunta al módulo correcto sin incluir código de backend, frontend, u otros servicios que no corresponden al pipeline. |
+| **Portabilidad del worker** | El directorio `workers/` es autocontenido: tiene su `pyproject.toml`, `Dockerfile`, `src/`, y `tests/`. Se puede buildear, testear, y deployar sin depender de la estructura del monorepo raíz. |
+
+### Estructura final
+
+```
+workers/tests/
+├── conftest.py                  # sys.path → src/ (PYTHONPATH para imports)
+│
+├── unit/                        # Tests unitarios — sin dependencias externas
+│   ├── test_helpers.py          # parse_*, normalize_*, clean_cell, slugify
+│   ├── test_rules.py            # Validadores: winners, matches, players, team, round
+│   ├── test_schemas.py          # Modelos Pydantic Raw + Clean
+│   └── test_cli.py              # Argumentos del CLI (argparse)
+│
+└── integration/                 # Tests de integración — requieren PG + MinIO
+    ├── __init__.py
+    ├── conftest.py              # Fixtures: asyncpg pool, MinIO client, CSVs sample
+    ├── test_w1_ingest.py        # CSV → MinIO → raw.* staging
+    ├── test_w2_clean.py         # raw.* → validación → dead_letter
+    └── test_w3_load.py          # raw.* → public.* upsert → Parquet
+```
+
+---
+
 ## Project Structure
 
 ```
@@ -394,11 +428,17 @@ uv run pytest -v --cov=worker
 │   ├── pyproject.toml         # Dependencias + tool config
 │   ├── Dockerfile             # Multi-stage build con uv
 │   ├── tests/
-│   │   └── unit/              # Unit tests (147 tests)
-│   │       ├── test_helpers.py
-│   │       ├── test_rules.py
-│   │       ├── test_schemas.py
-│   │       └── test_cli.py
+│   │   ├── conftest.py        # PYTHONPATH: src/
+│   │   ├── unit/              # Unit tests (147 tests)
+│   │   │   ├── test_helpers.py
+│   │   │   ├── test_rules.py
+│   │   │   ├── test_schemas.py
+│   │   │   └── test_cli.py
+│   │   └── integration/      # Integration tests (requiere PG + MinIO)
+│   │       ├── conftest.py
+│   │       ├── test_w1_ingest.py
+│   │       ├── test_w2_clean.py
+│   │       └── test_w3_load.py
 │   └── src/worker/
 │       ├── cli.py             # CLI orchestrator (fifa-worker)
 │       ├── core/              # Config, DB pool, MinIO client
@@ -428,13 +468,6 @@ uv run pytest -v --cov=worker
 │   ├── raw/                   # CSVs originales (wc_*.csv)
 │   ├── processed/             # Datos limpios post-W2
 │   └── samples/               # Versiones reducidas para test
-│
-├── tests/                      # Integration tests
-│   └── integration/
-│       ├── conftest.py        # Fixtures PG + MinIO + CSVs
-│       ├── test_w1_ingest.py
-│       ├── test_w2_clean.py
-│       └── test_w3_load.py
 │
 ├── infra/                      # nginx, monitoreo
 ├── docker-compose.yml          # Orquestación completa
