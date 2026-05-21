@@ -18,7 +18,7 @@ def _pg_available() -> bool:
     import os
 
     host = os.environ.get("POSTGRES_HOST", "localhost")
-    port = os.environ.get("POSTGRES_PORT", "5432")
+    port = os.environ.get("POSTGRES_PORT", "5434")
     import socket
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -41,7 +41,7 @@ def settings() -> Settings:
     return Settings(
         _env_file=None,
         postgres_host="localhost",
-        postgres_port="5432",
+        postgres_port="5434",
         postgres_user="champion07",
         postgres_password="change_me_in_production",  # noqa: S106
         postgres_db="data-world-cup",
