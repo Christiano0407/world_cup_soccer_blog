@@ -10,11 +10,9 @@ CREATE INDEX IF NOT EXISTS idx_wc_winners_valid ON raw.wc_winners (_is_valid) WH
 CREATE INDEX IF NOT EXISTS idx_wc_matches_valid ON raw.wc_matches (_is_valid) WHERE _is_valid IS NULL; 
 CREATE INDEX IF NOT EXISTS idx_wc_players_valid ON raw.wc_players (_is_valid) WHERE _is_valid IS NULL; 
 
--- Recreamos dead_letter con columnas que coinciden con clean_w2.py
+-- Aseguramos dead_letter con columnas que coinciden con clean_w2.py
 
-DROP TABLE IF EXISTS raw.dead_letter;
-
-CREATE TABLE raw.dead_letter (
+CREATE TABLE IF NOT EXISTS raw.dead_letter (
   _dl_id          BIGSERIAL     PRIMARY KEY,
   _source_table   TEXT          NOT NULL,
   _source_row_id  BIGINT,
