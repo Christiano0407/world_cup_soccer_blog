@@ -121,6 +121,10 @@ async def truncate_public_tables(pool: asyncpg.Pool) -> None:
             "public.match_players",
             "public.matches",
             "public.rounds",
+            "public.referees",
+            "public.stadiums",
+            "public.tournament_teams",
+            "public.players",
             "public.tournaments",
             "public.teams",
         ):
