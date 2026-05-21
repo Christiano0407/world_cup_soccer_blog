@@ -1,8 +1,6 @@
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
-import pytest
-
 from worker.utils.helpers import (
     clean_cell,
     format_s3_key,
@@ -21,7 +19,6 @@ from worker.utils.helpers import (
     parse_int,
     slugify,
 )
-
 
 # ═══════════════════════════════════════════════════════════════
 # parse_bool

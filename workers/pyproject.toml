@@ -67,7 +67,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "S", "B", "ANN"]
-per-file-ignores = { "tests/**" = ["S101", "ANN201"] } 
+per-file-ignores = { "tests/**" = ["S101", "ANN201", "ANN001", "ANN202"] } 
 
 [tool.mypy]
 python_version = "3.12"

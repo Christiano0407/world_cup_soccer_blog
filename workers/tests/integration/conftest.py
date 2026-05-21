@@ -3,8 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from io import BytesIO
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import asyncpg
 import pytest
@@ -44,11 +43,11 @@ def settings() -> Settings:
         postgres_host="localhost",
         postgres_port="5432",
         postgres_user="champion07",
-        postgres_password="change_me_in_production",
+        postgres_password="change_me_in_production",  # noqa: S106
         postgres_db="data-world-cup",
         minio_endpoint="localhost:9000",
         minio_access_key="admin",
-        minio_secret_key="change_me_in_production",
+        minio_secret_key="change_me_in_production",  # noqa: S106
     )
 
 
@@ -98,7 +97,7 @@ def sample_matches_csv() -> bytes:
 @pytest.fixture
 def sample_players_csv() -> bytes:
     return (
-        b"RoundID,MatchID,Team Initials,Coach Name,Line-up,Shirt Number,Player Name,Position,Event\n"
+        b"RoundID,MatchID,Team Initials,Coach Name,Line-up,Shirt Number,Player Name,Position,Event\n"  # noqa: E501
         b"1,1,ARG,Juan Jose Tramutola,S,0,Angel Bossio,GK,\n"
         b"1,1,ARG,Juan Jose Tramutola,S,4,Alberto Chividini,DF,\n"
     )
@@ -107,13 +106,13 @@ def sample_players_csv() -> bytes:
 # ── Helpers ─────────────────────────────────────────────────────
 async def count_rows(pool: asyncpg.Pool, table: str) -> int:
     async with pool.acquire() as conn:
-        return await conn.fetchval(f"SELECT COUNT(*) FROM {table}")
+        return await conn.fetchval(f"SELECT COUNT(*) FROM {table}")  # noqa: S608
 
 
 async def truncate_raw_tables(pool: asyncpg.Pool) -> None:
     async with pool.acquire() as conn:
         for t in ("raw.wc_winners", "raw.wc_matches", "raw.wc_players", "raw.dead_letter"):
-            await conn.execute(f"DELETE FROM {t}")
+            await conn.execute(f"DELETE FROM {t}")  # noqa: S608
 
 
 async def truncate_public_tables(pool: asyncpg.Pool) -> None:
@@ -125,4 +124,4 @@ async def truncate_public_tables(pool: asyncpg.Pool) -> None:
             "public.tournaments",
             "public.teams",
         ):
-            await conn.execute(f"DELETE FROM {t}")
+            await conn.execute(f"DELETE FROM {t}")  # noqa: S608

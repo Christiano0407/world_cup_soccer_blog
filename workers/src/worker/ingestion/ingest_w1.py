@@ -133,4 +133,3 @@ def _upload_to_minio(settings: Settings, data: bytes, key: str, filename: str) -
         content_type="text/csv",
         metadata={"x-source-file": filename},
     )
-

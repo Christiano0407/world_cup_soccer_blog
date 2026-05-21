@@ -51,8 +51,10 @@ async def _seed_valid_data(pg_pool):
                 round_id, match_id, team_initials, coach_name,
                 line_up, shirt_number, player_name, position, event
             ) VALUES
-            ('test.csv', TRUE, '1', '1', 'ARG', 'Coach Tramutola', 'S', '0', 'Angel Bossio', 'GK', ''),
-            ('test.csv', TRUE, '1', '1', 'ARG', 'Coach Tramutola', 'S', '4', 'Alberto Chividini', 'DF', ''),
+            ('test.csv', TRUE, '1', '1', 'ARG', 'Coach Tramutola', 'S', '0',
+             'Angel Bossio', 'GK', ''),
+            ('test.csv', TRUE, '1', '1', 'ARG', 'Coach Tramutola', 'S', '4',
+             'Alberto Chividini', 'DF', ''),
             ('test.csv', TRUE, '1', '2', 'ARG', 'Coach Tramutola', 'S', '10', 'Messi', 'FW', 'G')
             """
         )

@@ -15,9 +15,7 @@ FLOW:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import asyncpg
 import structlog
@@ -35,7 +33,7 @@ from worker.utils.helpers import (
 
 log = structlog.get_logger(__name__)
 BATCH_SIZE = 500
-TEMP_PARQUET_DIR = "/tmp/w3_parquet"
+TEMP_PARQUET_DIR = "/tmp/w3_parquet"  # noqa: S108
 
 
 @dataclass
@@ -64,6 +62,7 @@ class LoadResult:
 # ─────────────────────────────────────────────────────────────────────────────
 # PUBLIC ENTRYPOINT
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 async def load_all(settings: Settings) -> LoadResult:
     """W3 main entrypoint. Orchestrates the full load pipeline."""
@@ -103,6 +102,7 @@ async def load_all(settings: Settings) -> LoadResult:
 # ─────────────────────────────────────────────────────────────────────────────
 # TEAMS — extract distinct initials+names from valid matches & players
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 async def _load_teams(conn: asyncpg.Connection) -> int:
     teams: dict[str, str] = {}
@@ -145,6 +145,7 @@ async def _load_teams(conn: asyncpg.Connection) -> int:
 # ─────────────────────────────────────────────────────────────────────────────
 # TOURNAMENTS — from valid winners rows
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 async def _load_tournaments(conn: asyncpg.Connection) -> int:
     rows = await conn.fetch("""
@@ -200,6 +201,7 @@ async def _load_tournaments(conn: asyncpg.Connection) -> int:
 # ROUNDS — extract distinct round_id + stage per tournament
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 async def _extract_tournament_id_map(conn: asyncpg.Connection) -> dict[int, int]:
     rows = await conn.fetch("SELECT year, tournament_id FROM public.tournaments")
     return {r["year"]: r["tournament_id"] for r in rows}
@@ -246,6 +248,7 @@ async def _load_rounds(conn: asyncpg.Connection) -> int:
 # ─────────────────────────────────────────────────────────────────────────────
 # MATCHES — from valid matches rows
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 async def _load_matches(conn: asyncpg.Connection) -> int:
     year_tid = await _extract_tournament_id_map(conn)
@@ -341,6 +344,7 @@ async def _load_matches(conn: asyncpg.Connection) -> int:
 # MATCH PLAYERS — from valid players rows
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 async def _load_match_players(conn: asyncpg.Connection) -> int:
     valid_match_ids = [
         r["match_id"]
@@ -403,6 +407,7 @@ async def _load_match_players(conn: asyncpg.Connection) -> int:
 # PARQUET EXPORT → MinIO
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 async def _export_parquet(pool: asyncpg.Pool, settings: Settings) -> list[str]:
     try:
         import pandas as pd
@@ -423,7 +428,7 @@ async def _export_parquet(pool: asyncpg.Pool, settings: Settings) -> list[str]:
     try:
         for table in tables:
             async with pool.acquire() as conn:
-                rows = await conn.fetch(f"SELECT * FROM {table} ORDER BY 1")
+                rows = await conn.fetch(f"SELECT * FROM {table} ORDER BY 1")  # noqa: S608
             df = pd.DataFrame([dict(r) for r in rows])
             if df.empty:
                 log.info("w3.parquet_empty", table=table)

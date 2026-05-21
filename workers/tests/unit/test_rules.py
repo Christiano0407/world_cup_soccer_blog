@@ -1,6 +1,5 @@
 import pytest
 
-from worker.utils.constants import MAX_WC_YEAR, MIN_WC_YEAR
 from worker.validators.rules import (
     validate_matches_row,
     validate_players_row,
@@ -13,7 +12,6 @@ from worker.validators.schemas import (
     RawPlayersRow,
     RawWinnersRow,
 )
-
 
 # ═══════════════════════════════════════════════════════════════
 # Fixtures compartidas
@@ -149,7 +147,7 @@ class TestValidateWinnersRow:
 
     def test_low_goals_avg_rejected_by_schema(self, valid_winners_raw: RawWinnersRow):
         valid_winners_raw.goals_scored = "4"
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             validate_winners_row(valid_winners_raw)
 
     def test_high_goals_avg_is_warning(self, valid_winners_raw: RawWinnersRow):

@@ -6,15 +6,15 @@ workers/utils/constants.py
 
 =========================
 Constantes de negocio y del pipeline ETL FIFA World Cup.
- 
+
   - DatasetKind    → tipo literal para los 3 datasets del proyecto
   - DATASET_CONFIG → mapeo dataset → tabla raw + columnas + SQL de insert
   - Schemas SQL    → nombres de schemas de PostgreSQL
   - Regex          → patrones de validación reutilizables
   - Posiciones     → valores válidos del CSV de players
- 
+
 REGLA: Nunca hardcodear estos valores en la lógica — siempre referenciar desde aquí.
- 
+
 Bugs corregidos vs versión anterior:
   - matches y players: "raw_tables" → "raw_table" (typo)
   - players insert_sql: trailing comma eliminada (rompía PostgreSQL)
@@ -33,7 +33,7 @@ DatasetKind = Literal["winners", "matches", "players"]  # - Tables / SQL - postg
 # = Maps dataset name → (csv columns in order, raw table name) =
 DATASET_CONFIG: dict[DatasetKind, dict] = {
     "winners": {
-        "raw_table": "raw.wc_winners", # > Clave consistente: raw_table
+        "raw_table": "raw.wc_winners",  # > Clave consistente: raw_table
         "columns": [
             "year",
             "country",
@@ -118,10 +118,10 @@ DATASET_CONFIG: dict[DatasetKind, dict] = {
 # ─────────────────────────────────────────────────────────────────────────────
 # NOMBRES DE SCHEMAS PostgreSQL
 # ─────────────────────────────────────────────────────────────────────────────
-RAW_SCHEMA:str = "raw"
-PUBLIC_SCHEMA:str = "public"
-WAREHOUSE_SCHEMA:str = "warehouse"
-AUDIT_SCHEMA:str = "audit"
+RAW_SCHEMA: str = "raw"
+PUBLIC_SCHEMA: str = "public"
+WAREHOUSE_SCHEMA: str = "warehouse"
+AUDIT_SCHEMA: str = "audit"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ AUDIT_SCHEMA:str = "audit"
 ## ---- Iniciales de equipo: 2-3 letras mayúsculas
 TEAM_INITIALS_PATTERN: str = r"^[A-Z]{2,3}$"
 ## ---- Formato datetime del CSV de matches: "13 Jul 1930 - 15:00"
-CSV_DATETIME_PATTERN:str = r"^\d{1,2}\s+[A-Za-z]{3}\s+\d{4}\s+\d{2}:\d{2}"
+CSV_DATETIME_PATTERN: str = r"^\d{1,2}\s+[A-Za-z]{3}\s+\d{4}\s+\d{2}:\d{2}"
 ## ---- SKU genérico (heredado, por si se reutiliza)
 SKU_PATTERN: str = r"^[A-Z0-9\-]{3,64}$"
 ## ---- Dimensiones (heredado)
@@ -143,23 +143,23 @@ DIMENSIONS_PATTERN: str = r"^\d+(\.\d+)?[xX]\d+(\.\d+)?[xX]\d+(\.\d+)?$"
 # ─────────────────────────────────────────────────────────────────────────────
 ### ---- Posiciones válidas en el CSV de players
 VALID_POSITIONS: frozenset[str] = frozenset({"GK", "DF", "MF", "FW", "C"})
- 
+
 ### ---- Tipos de alineación válidos
 VALID_LINEUP_TYPES: frozenset[str] = frozenset({"S", "N"})
- 
+
 ### ---- Eventos válidos — prefijos (ej: "G40", "G45+1" también son válidos)
 VALID_EVENT_PREFIXES: tuple[str, ...] = ("G", "OG", "Y", "R", "SY", "P")
- 
+
 ### ---- Rango de años válidos del Mundial FIFA
 MIN_WC_YEAR: int = 1930
 MAX_WC_YEAR: int = 2030
- 
+
 ### ---- Límite razonable de goles por torneo
 MAX_GOALS_PER_TOURNAMENT: int = 200
- 
+
 ### ---- Límite razonable de asistencia por partido
 MAX_ATTENDANCE_PER_MATCH: int = 200_000
- 
+
 ### ---- Shirt numbers válidos (0 = sin asignar en el CSV)
 MAX_SHIRT_NUMBER: int = 99
 
@@ -174,11 +174,11 @@ WAREHOUSE_SCHEMA: str = "warehouse"
 
 #### ---- Tamaño de batch para inserts en raw.* (W1)
 ETL_BATCH_SIZE: int = 500
- 
+
 #### ---- Tiempo máximo de espera para conexión a DB (segundos)
 DB_CONNECT_TIMEOUT: int = 30
- 
+
 #### ---- Prefijos en MinIO
-MINIO_RAW_PREFIX: str       = "raw"
+MINIO_RAW_PREFIX: str = "raw"
 MINIO_PROCESSED_PREFIX: str = "processed"
-MINIO_PARQUET_PREFIX: str   = "parquet"
+MINIO_PARQUET_PREFIX: str = "parquet"

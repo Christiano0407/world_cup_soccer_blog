@@ -10,15 +10,15 @@ pytestmark = [skip_if_no_pg, pytest.mark.integration]
 
 async def _seed_winners(pg_pool):
     async with pg_pool.acquire() as conn:
-        await conn.execute(
-            """
-            INSERT INTO raw.wc_winners (_source_file, year, country, winner, runners_up, third, fourth,
-                                         goals_scored, qualified_teams, matches_played, attendance)
+        await conn.execute("""
+            INSERT INTO raw.wc_winners
+                (_source_file, year, country, winner, runners_up, third, fourth,
+                 goals_scored, qualified_teams, matches_played, attendance)
             VALUES
-            ('test.csv', '1930', 'Uruguay', 'Uruguay', 'Argentina', 'USA', 'Yugoslavia',
-             '70', '13', '18', '590549'),
-            ('test.csv', '1934', 'Italy', '', 'Czechoslovakia', 'Germany', 'Austria',
-             '70', '16', '17', '363000')
+                ('test.csv', '1930', 'Uruguay', 'Uruguay', 'Argentina', 'USA', 'Yugoslavia',
+                 '70', '13', '18', '590549'),
+                ('test.csv', '1934', 'Italy', '', 'Czechoslovakia', 'Germany', 'Austria',
+                 '70', '16', '17', '363000')
             """
         )
 
@@ -88,17 +88,13 @@ class TestW2Winners:
     async def test_valid_row_has_is_valid_true(self, pg_pool, settings):
         await clean_dataset("winners", settings)
         async with pg_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT _is_valid FROM raw.wc_winners WHERE year = '1930'"
-            )
+            row = await conn.fetchrow("SELECT _is_valid FROM raw.wc_winners WHERE year = '1930'")
             assert row["_is_valid"] is True
 
     async def test_invalid_row_has_is_valid_false(self, pg_pool, settings):
         await clean_dataset("winners", settings)
         async with pg_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT _is_valid FROM raw.wc_winners WHERE year = '1934'"
-            )
+            row = await conn.fetchrow("SELECT _is_valid FROM raw.wc_winners WHERE year = '1934'")
             assert row["_is_valid"] is False
 
 
@@ -121,9 +117,7 @@ class TestW2Matches:
     async def test_match_missing_stage_rejected(self, pg_pool, settings):
         await clean_dataset("matches", settings)
         async with pg_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT _is_valid FROM raw.wc_matches WHERE match_id = '2'"
-            )
+            row = await conn.fetchrow("SELECT _is_valid FROM raw.wc_matches WHERE match_id = '2'")
             assert row["_is_valid"] is False
 
 

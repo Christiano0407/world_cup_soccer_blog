@@ -4,7 +4,6 @@ import pytest
 from minio.error import S3Error
 
 from worker.ingestion.ingest_w1 import ingest_csv
-from worker.utils.constants import DATASET_CONFIG
 
 from .conftest import count_rows, skip_if_no_pg, truncate_raw_tables
 
@@ -113,7 +112,7 @@ class TestW1Players:
         await ingest_csv(csv_file, "players", settings)
         async with pg_pool.acquire() as conn:
             row = await conn.fetchrow(
-                "SELECT player_name, position, team_initials FROM raw.wc_players ORDER BY _row_id LIMIT 1"
+                "SELECT player_name, position, team_initials FROM raw.wc_players ORDER BY _row_id LIMIT 1"  # noqa: E501
             )
         assert row["player_name"] == "Angel Bossio"
         assert row["position"] == "GK"
