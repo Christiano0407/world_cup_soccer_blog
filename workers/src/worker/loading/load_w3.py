@@ -347,7 +347,7 @@ async def _load_matches(conn: asyncpg.Connection) -> int:
 
 async def _load_match_players(conn: asyncpg.Connection) -> int:
     valid_match_ids = [
-        r["match_id"]
+        parse_int(r["match_id"])
         for r in await conn.fetch(
             "SELECT DISTINCT match_id FROM raw.wc_players WHERE _is_valid = TRUE"
         )
