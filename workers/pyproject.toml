@@ -76,7 +76,7 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths    = ["tests"]
-addopts      = "-v --cov=app --cov-report=term-missing"
+addopts      = "-v --cov=worker --cov-report=term-missing"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/worker"]
