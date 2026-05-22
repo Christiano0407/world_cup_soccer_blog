@@ -284,6 +284,9 @@ async def _load_matches(conn: asyncpg.Connection) -> int:
             continue
 
         match_dt = parse_datetime_csv(str(r["datetime"])) if r["datetime"] else None
+        if match_dt is None:
+            log.warning("w3.match_skip_no_datetime", match_id=match_id)
+            continue
 
         await conn.execute(
             """
