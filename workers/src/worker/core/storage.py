@@ -7,8 +7,11 @@ from worker.core.config import settings
 
 def get_minio_client() -> Minio:
     """Create and return a configured MinIO client."""
+    endpoint = settings.minio_endpoint.strip()
+    if "://" in endpoint:
+        endpoint = endpoint.split("://", 1)[1]
     return Minio(
-        endpoint=settings.minio_endpoint,
+        endpoint=endpoint,
         access_key=settings.minio_access_key,
         secret_key=settings.minio_secret_key,
         secure=settings.minio_secure,
