@@ -34,6 +34,8 @@ dependencies = [
 
     # Rate limiting
     "slowapi>=0.1.9",
+
+    "pyarrow>=14.0.0",
 ]
 
 [project.optional-dependencies]
