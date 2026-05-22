@@ -1,85 +1,133 @@
 # FIFA World Cup Data Platform
 
 [![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.111+-00A98F?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)](https://postgresql.org)
 [![MinIO](https://img.shields.io/badge/MinIO-S3--compatible-FF6600?logo=minio&logoColor=white)](https://min.io)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docker.com)
 [![uv](https://img.shields.io/badge/uv-0.6+-DE5FE9?logo=python&logoColor=white)](https://github.com/astral-sh/uv)
-[![Async](https://img.shields.io/badge/Async-asyncpg%20%7C%20httpx-0EA5E9?logo=python&logoColor=white)](https://github.com/MagicStack/asyncpg)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Async](https://img.shields.io/badge/Async-asyncpg-0EA5E9?logo=python&logoColor=white)](https://github.com/MagicStack/asyncpg)
+
+---
+
+## Tabla de Contenidos
+
+- [Mapa Maestro](#mapa-maestro--arquitectura-del-sistema)
+- [Pipeline ETL](#pipeline-etl--detalle-por-etapa)
+- [Stack Tecnológico](#stack-tecnológico)
+- [Quick Reference — Comandos](#quick-reference--comandos)
+- [Comandos psql para Verificación](#comandos-psql-para-verificación)
+- [Servicios y Puertos](#servicios-y-puertos)
+- [Prerrequisitos y Setup](#prerrequisitos-y-setup)
+- [Ejecutar Pipeline ETL](#ejecutar-pipeline-etl)
+- [Ejecutar Tests](#ejecutar-tests)
+- [Test Architecture](#test-architecture)
+- [Troubleshooting — Errores Conocidos](#troubleshooting--errores-conocidos)
+- [Project Structure](#project-structure)
+- [Licencia](#licencia)
 
 ---
 
 ## Mapa Maestro — Arquitectura del Sistema
 
 ```
-                                ╔═══════════════════════════════════════════════════════════╗
-                                ║                    nginx (reverse proxy)                  ║
-                                ║                    :8080 → :80 (api-gateway.conf)         ║
-                                ╚══════════════════════╤════════════════════════════════════╝
-                                                       │
-                                ╔══════════════════════▼════════════════════════════════════╗
-                                ║              FastAPI Backend  (backend/src/app/)           ║
-                                ║  ┌────────────┬────────────┬────────────┬──────────────┐  ║
-                                ║  │  api/routes │ schemas/   │ models/     │ core/       │  ║
-                                ║  │  (REST)     │ (Pydantic) │ (SQLAlchemy)│ config/     │  ║
-                                ║  │  handlers   │  request   │  ORM models │ security/   │  ║
-                                ║  │             │  response  │             │ db session  │  ║
-                                ║  └──────┬──────┴─────┬──────┴──────┬──────┴──────────────┘  ║
-                                ╚═════════╪═══════════╪═════════════╪═════════════════════════╝
-                                          │           │             │
-              ╔═══════════════════════════╪═══════════╪═════════════╪═══════════════════════╗
-              ║                PostgreSQL 15  (data-world-cup)  :5434 → :5432               ║
-              ║  ┌────────────────────────────────────────────────────────────────────────┐ ║
-              ║  │  Schema: raw       │  Schema: public     │  Schema: warehouse           │ ║
-              ║  │  ──────────        │  ──────────         │  ──────────────────          │ ║
-              ║  │  wc_winners ↓text  │  teams              │  vw_* materialized views    │ ║
-              ║  │  wc_matches  ↓text │  tournaments        │                              │ ║
-              ║  │  wc_players  ↓text │  rounds             │  Schema: audit               │ ║
-              ║  │  dead_letter       │  matches            │  ──────────────────          │ ║
-              ║  │                    │  match_players      │  auth_refresh_tokens         │ ║
-              ║  │                    │  users              │  auth_password_resets        │ ║
-              ║  │                    │                     │  etl_run_log                 │ ║
-              ║  └────────────────────────────────────────────────────────────────────────┘ ║
-              ╚═══════════════════════════╤═══════════════╤══════════════════════════════════╝
-                                          │               │
-              ╔═══════════════════════════▼═══════════════▼══════════════════════════════════╗
-              ║                         ETL Pipeline Workers (workers/src/worker/)           ║
-              ║                                                                              ║
-              ║  ┌─────────────────────┐    ┌─────────────────────┐    ┌───────────────────┐ ║
-              ║  │  W1 — Ingest        │    │  W2 — Clean         │    │  W3 — Load        │ ║
-              ║  │  (Extract)          │───▶│  (Validate)         │───▶│  (Transform)      │ ║
-              ║  │                     │    │                     │    │                   │ ║
-              ║  │  CSV → pandas(str)  │    │  read raw.*         │    │  _is_valid=TRUE   │ ║
-              ║  │  → MinIO raw/       │    │  → validate rules   │    │  → cast types     │ ║
-              ║  │  → raw.* INSERT     │    │  → UPDATE _is_valid │    │  → UPSERT public.*│ ║
-              ║  │  → SHA-256 hash     │    │  → dead_letter      │    │  → Parquet export │ ║
-              ║  └─────────────────────┘    └─────────────────────┘    └───────────────────┘ ║
-              ║                                                                              ║
-              ║                     fifa-worker --all  (W1 → W2 → W3)                        ║
-              ╚═══════════════════════════╤═══════════════════════════════════════════════════╝
-                                          │
-              ╔═══════════════════════════▼═══════════════════════════════════════════════════╗
-              ║                    MinIO (S3-compatible Storage)                             ║
-              ║  ┌─────────────┬─────────────┬─────────────┬──────────────────────────────┐  ║
-              ║  │  Bucket:    │  Bucket:    │  Bucket:    │  Console: :9001              │  ║
-              ║  │  raw/       │  parquet/   │  processed/ │  API:     :9000              │  ║
-              ║  │  raw CSV    │  .parquet   │  clean CSVs │  Admin: admin / <password>   │  ║
-              ║  └─────────────┴─────────────┴─────────────┴──────────────────────────────┘  ║
-              ╚═══════════════════════════════════════════════════════════════════════════════╝
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                        DATA LAYER                                              │
+│                           docker-compose.yml  ───  .env (config)                                │
+│                           postgres:5434 │ minio:9000 │ nginx:8080                               │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-                                          ┌──────────────────────┐
-                                          │   Frontend Web UI    │
-                                          │   (frontend/)        │
-                                          └──────────────────────┘
+    ┌──────────────────────────────────────────────────────────────────┐
+    │  nginx (reverse proxy)                    host:8080 → cont:80   │
+    │  ├─ /api/* ──▶ backend (FastAPI)                               │
+    │  └─ /       ──▶ frontend                                       │
+    └───────────────────────────────────────────┬──────────────────────┘
+                                                │
+                                                ▼
+    ┌──────────────────────────────────────────────────────────────────┐
+    │  PostgreSQL 15  (db=data-world-cup)        host:5434 → cont:5432 │
+    │                                                                  │
+    │  ┌────────────────────────────────────────────────────────────┐  │
+    │  │  Schemas internos                                          │  │
+    │  │                                                            │  │
+    │  │  raw.*          │  raw.wc_winners   (TEXT, staging cruda)  │  │
+    │  │                 │  raw.wc_matches   (TEXT, staging cruda)  │  │
+    │  │                 │  raw.wc_players   (TEXT, staging cruda)  │  │
+    │  │                 │  raw.dead_letter  (rechazos de W2)       │  │
+    │  │                 └────────────────────────────────────────  │  │
+    │  │                                                            │  │
+    │  │  public.*       │  public.teams         (tipado + FKs)     │  │
+    │  │                 │  public.tournaments   (tipado + FKs)     │  │
+    │  │                 │  public.rounds        (tipado + FKs)     │  │
+    │  │                 │  public.matches       (tipado + FKs)     │  │
+    │  │                 │  public.match_players (tipado + FKs)     │  │
+    │  │                 │  public.stadiums, referees, players...   │  │
+    │  │                 └────────────────────────────────────────  │  │
+    │  │                                                            │  │
+    │  │  warehouse.*    │  vw_tournament_stats  (materializada)    │  │
+    │  │                 │  vw_match_details     (materializada)    │  │
+    │  │                 │  vw_player_leaderboard (materializada)   │  │
+    │  │                 └────────────────────────────────────────  │  │
+    │  │                                                            │  │
+    │  │  audit.*        │  logs (cambios, errores)                 │  │
+    │  │                 │  auth (credenciales API)                 │  │
+    │  └────────────────────────────────────────────────────────────┘  │
+    └───────────────────────┬──────────────────────────────────────────┘
+                            │
+                            │  asyncpg :5432 (dentro de red Docker)
+                            ▼
 
-                              Capa de Pruebas:
-                              ┌────────────────────────────────────────────────────────┐
-                              │  tests/unit/  →  helpers, rules, schemas, cli          │
-                              │  tests/integration/  →  W1 ingest, W2 clean, W3 load   │
-                              │  pytest + pytest-asyncio + pytest-cov                  │
-                              └────────────────────────────────────────────────────────┘
+    ┌──────────────────────────────────────────────────────────────────┐
+    │  ETL Pipeline Workers  (container: fifa-workers)                 │
+    │                                                                  │
+    │  │ CLI entrypoint: cli.py  (fifa-worker --all)                  │
+    │  │ Runtime:  uv run fifa-worker [--ingest | --clean | --load]   │
+    │  │ Deps:     asyncpg, pandas, minio, pydantic, pyarrow           │
+    │  │ Logging:  structlog (JSON estructurado a stdout)             │
+    │  │                                                            │
+    │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    │
+    │  │              │    │              │    │              │    │
+    │  │  W1 — Ingest │───▶│  W2 — Clean  │───▶│  W3 — Load   │    │
+    │  │              │    │              │    │              │    │
+    │  │  CSV on disk │    │  rules.py    │    │  schemas.py  │    │
+    │  │  pandas read │    │  validates   │    │  transforms  │    │
+    │  │  raw.* TEXT  │    │  _is_valid   │    │  public.*    │    │
+    │  │  MinIO raw/  │    │  dead_letter │    │  warehouse.* │    │
+    │  │              │    │              │    │  MinIO parq/ │    │
+    │  │  ingest_w1   │    │  clean_w2    │    │  load_w3     │    │
+    │  └──────┬───────┘    └──────────────┘    └───────┬──────┘    │
+    │         │                                        │           │
+    │         └─────── Data Flow ──────────────────────┘           │
+    └─────────────────────────┬────────────────────────────────────┘
+                              │
+                              │  minio-py :9000 (S3 API)
+                              ▼
+
+    ┌──────────────────────────────────────────────────────────────────┐
+    │  MinIO (S3-compatible)              API: host:9000 → cont:9000  │
+    │                                    Console: host:9001 → cont:9001│
+    │                                                                  │
+    │  Bucket: core-storage                                            │
+    │  ┌────────────────────────────────────────────────────────────┐  │
+    │  │  /raw/          CSVs originales  (W1 upload)              │  │
+    │  │  /parquet/      Datos transformados (W3 export, .parquet) │  │
+    │  │  /processed/    CSVs ya procesados (W1 post-upload)      │  │
+    │  │  /images/       Assets gráficos  (backend/frontend)      │  │
+    │  └────────────────────────────────────────────────────────────┘  │
+    │                                                                  │
+    │  ⚠ S3_ENDPOINT=minio:9000  (sin http:// — minio-py lo añade)   │
+    └──────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────────────────────────────────────────────────────────┐
+    │  Volúmenes y montajes (bind mounts)                              │
+    │                                                                  │
+    │  ./data/raw/     ──▶  /raw/        (workers: CSVs de entrada)   │
+    │  ./data/samples/ ──▶  /samples/    (workers: datos de prueba)   │
+    │  db/migrations/  ──▶  /docker-entrypoint-initdb.d/  (PG init)   │
+    │                                                                  │
+    │  ./data/raw/  contiene:  wc_world_cup_winners.csv                │
+    │                          wc_matches.csv                          │
+    │                          wc_players.csv                          │
+    └──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -88,240 +136,238 @@
 
 ### W1 — Ingest (Extract)
 
-Lee los CSVs crudos del directorio `data/raw/` y los sube al storage y base de datos sin transformación alguna.
+Lee los CSVs crudos del directorio `data/raw/` y los persiste en la base y en MinIO sin transformación.
 
-```bash
-fifa-worker --ingest
+```
+wc_*.csv  ──▶  pandas(dtype=str)  ──▶  raw.* (TEXT columns)
+data/raw/                           ──▶  MinIO bucket raw/
+                                     ──▶  SHA-256 checksum
 ```
 
-| Responsabilidad | Implementación |
+| Característica | Detalle |
 |---|---|
-| Lectura CSV | `pandas.read_csv(dtype=str, keep_default_na=False)` — sin inferencia de tipos |
-| Upload raw | MinIO bucket `raw/` — preservation bit a bit del archivo original |
-| Staging DB | `raw.wc_winners`, `raw.wc_matches`, `raw.wc_players` — columnas TEXT |
-| Trazabilidad | SHA-256 del archivo + `_source_file` por fila |
-| Header | `matches` no tiene cabecera → `header=None, names=config["columns"]` |
-
-**Anti-corruption layer:** En esta etapa NO se castea, NO se valida, NO se transforma. El CSV entra tal cual.
-
-```
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│  wc_*.csv    │───▶│  pandas(str) │───▶│  raw.* (TEXT)│
-│  data/raw/   │    │  + SHA-256   │    │  + MinIO     │
-└──────────────┘    └──────────────┘    └──────────────┘
-```
+| Inferencia de tipos | Deshabilitada (`dtype=str, keep_default_na=False`) |
+| Columnas | Todas `TEXT` — sin constraints ni validaciones |
+| Almacenamiento | `raw.wc_winners`, `raw.wc_matches`, `raw.wc_players` |
+| Trazabilidad | `_source_file`, `_row_id`, SHA-256 del archivo |
+| MinIO | Bucket `raw/` con copia bit a bit del CSV original |
 
 ### W2 — Clean (Validate)
 
-Lee las filas pendientes (`_is_valid IS NULL`) de `raw.*`, las valida contra reglas de negocio, y marca su estado.
-
-```bash
-fifa-worker --clean
-```
-
-| Dataset | Reglas de validación | Errores posibles |
-|---|---|---|
-| **winners** | `year` [1930-2030], `winner` presente, `goals_scored` ≥ 0, `qualified_teams` [1-48], avg goles/partido | `MISSING_YEAR`, `MISSING_WINNER`, `NEGATIVE_GOALS_SCORED`, `MISSING_PODIUM` (warning) |
-| **matches** | `match_id` ≥ 1, `stage` presente, goles ≥ 0, iniciales 2-3 letras, `round_id` ≥ 1 | `INVALID_MATCH_ID`, `MISSING_STAGE`, `INVALID_HOME_GOALS`, `MISSING_HOME_INITIALS` |
-| **players** | `round_id` ≥ 1, `match_id` ≥ 1, `team_initials` presentes, `line_up` S/N, `player_name` presente | `INVALID_ROUND_ID`, `MISSING_TEAM_INITIALS`, `INVALID_LINEUP_TYPE`, `MISSING_PLAYER_NAME` |
+Lee filas pendientes (`_is_valid IS NULL`), aplica reglas de negocio, y marca cada fila como válida o inválida.
 
 ```
-raw.* / _is_valid=NULL     raw.* / _is_valid=TRUE
-         │                          │
-         ▼                          ▼
-┌────────────────────┐    ┌────────────────────┐
-│  ValidationResult   │    │  Clean{Dataset}Row │
-│  rules.py           │───▶│  schemas.py        │
-│  - errors[]         │    │  (Pydantic v2)     │
-│  - warnings[]       │    └────────────────────┘
-│  - is_valid         │              │
-│  - clean_row        │    raw.* / _is_valid=FALSE
-└────────────────────┘              │
-         │                          ▼
-         ▼                 ┌────────────────────┐
-┌────────────────┐        │  raw.dead_letter   │
-│  is_valid=TRUE  │        │  - _error_code     │
-│  → UPDATE TRUE  │        │  - _error_detail   │
-│  is_valid=FALSE │        │  - _rejected_at    │
-│  → UPDATE FALSE │        └────────────────────┘
-│  → INSERT dead  │
-└────────────────┘
+raw.*  ──▶  rules.py (validadores)  ──▶  _is_valid = TRUE/FALSE
+                    │                       │
+                    ▼                       ▼
+            RowWarning / Error       raw.dead_letter (si FALSE)
 ```
 
-La tasa de rechazo (`rejection_rate`) es monitoreada: si supera el 10%, el pipeline **no continúa** a W3 (señal de problema en los datos fuente).
+| Dataset | Reglas Clave |
+|---|---|
+| **winners** | `year` [1930-2030], `winner` presente, `goals_scored` ≥ 0, `qualified_teams` [1-48] |
+| **matches** | `match_id` ≥ 1, `stage` presente, goles ≥ 0, iniciales 2-3 letras |
+| **players** | `round_id` ≥ 1, `match_id` ≥ 1, `team_initials` presentes, `line_up` S/N |
+
+El pipeline monitorea la tasa de rechazo: si supera el 10%, no continúa a W3.
 
 ### W3 — Load (Transform & Load)
 
-Lee solo las filas validadas (`_is_valid = TRUE`) de `raw.*`, transforma los tipos y hace upsert en `public.*`.
-
-```bash
-fifa-worker --load
-```
-
-| Orden | Tabla destino | Fuente | Tipo de carga |
-|---|---|---|---|
-| 1 | `public.teams` | `raw.wc_matches` + `raw.wc_players` (DISTINCT initials) | `INSERT ... ON CONFLICT DO UPDATE` |
-| 2 | `public.tournaments` | `raw.wc_winners` | `INSERT ... ON CONFLICT (year) DO UPDATE` |
-| 3 | `public.rounds` | `raw.wc_matches` (DISTINCT round_id + year) | `INSERT ... ON CONFLICT (round_id) DO UPDATE` |
-| 4 | `public.matches` | `raw.wc_matches` | `INSERT ... ON CONFLICT (match_id) DO UPDATE` |
-| 5 | `public.match_players` | `raw.wc_players` | DELETE + INSERT (replace por match) |
-| 6 | Warehouse | `SELECT warehouse.refresh_all()` | Materialized views refresh |
-| 7 | Parquet export | `public.*` → `.parquet` → MinIO | `pandas.to_parquet()` |
-
-**Transformaciones aplicadas:**
-- `parse_int()` — conversión segura de strings a enteros
-- `parse_attendance()` — manejo de formato europeo (punto como separador de miles: `"590.549"` → `590549`)
-- `parse_datetime_csv()` — parser específico para `"13 Jul 1930 - 15:00"`
-- `normalize_text()` — strip + truncate opcional por límite de columna
-- `normalize_initials()` — uppercase + validación 2-3 caracteres
-- `normalize_team_names()` — title case (`"germany fr"` → `"Germany Fr"`)
+Lee solo filas validadas (`_is_valid = TRUE`), transforma tipos, y hace upsert en `public.*`.
 
 ```
-raw.wc_winners  (_is_valid=TRUE)   ───▶  public.tournaments
-raw.wc_matches  (_is_valid=TRUE)   ───▶  public.rounds
-                +                  ───▶  public.matches
-raw.wc_players  (_is_valid=TRUE)   ───▶  public.match_players
-raw.wc_matches  (_is_valid=TRUE)
-raw.wc_players  (_is_valid=TRUE)   ───▶  public.teams
+raw.wc_winners  ──▶  public.tournaments    (ON CONFLICT year)
+raw.wc_matches  ──▶  public.rounds          (ON CONFLICT round_id)
+                 ──▶  public.matches         (ON CONFLICT match_id)
+                 ──▶  public.teams           (ON CONFLICT initials)
+raw.wc_players  ──▶  public.match_players    (DELETE + INSERT)
+                 ──▶  public.teams
 
-Todas las tablas public.*         ───▶  warehouse.refresh_all()
-                                      ───▶  MinIO parquet/
+Todas ──▶  warehouse.refresh_all()
+       ──▶  MinIO parquet/  (.parquet)
 ```
+
+**Transformaciones:**
+| Función | Propósito |
+|---|---|
+| `parse_int()` | String → int (None si inválido) |
+| `parse_attendance()` | "590.549" → 590549 (formato europeo) |
+| `parse_datetime_csv()` | "13 Jul 1930 - 15:00" → datetime |
+| `normalize_text()` | Strip + truncate por límite de columna |
+| `normalize_initials()` | Uppercase + validación 2-3 caracteres |
+| `normalize_team_names()` | Title case |
+
+**Manejo de errores conocidos en W3:**
+- Filas sin `match_datetime` → se saltan (warn + continue)
+- Players con `match_id` ausente en `matches` → se filtran contra `public.matches`
 
 ---
 
 ## Stack Tecnológico
 
-### Lenguajes y Entornos
+### Core
 
 | Tecnología | Versión | Propósito |
 |---|---|---|
-| **Python** | ≥ 3.12 | Lenguaje principal — type hints nativos, pattern matching, mejoras en asyncio |
-| **Docker Compose** | v2.27+ | Orquestación multi-contenedor con health checks y dependencias |
-| **nginx** | 1.25+ | Reverse proxy con rate limiting y buffering |
+| Python | ≥ 3.12 | Type hints nativos, pattern matching, asyncio |
+| Docker Compose | v2.27+ | Orquestación multi-contenedor |
+| PostgreSQL | 15 | Base de datos relacional |
+| MinIO | latest | Storage S3-compatible |
+| nginx | 1.25+ | Reverse proxy |
 
-### Backend — API REST
-
-| Librería | Versión | Propósito |
-|---|---|---|
-| `fastapi` | ≥ 0.111 | Framework REST con OpenAPI auto-documentado |
-| `uvicorn[standard]` | ≥ 0.29 | Servidor ASGI con uvloop + httptools |
-| `sqlalchemy[asyncio]` | ≥ 2.0 | ORM asíncrono con async engine y session factory |
-| `alembic` | ≥ 1.13 | Versionado de migraciones DDL |
-| `python-jose[cryptography]` | ≥ 3.3 | JWT creation & verification (Bearer tokens) |
-| `passlib[argon2]` | ≥ 1.7.4 | Hashing de passwords con Argon2id (recomendación OWASP) |
-| `python-multipart` | ≥ 0.0.9 | Parsing de form data para login |
-| `slowapi` | ≥ 0.1.9 | Rate limiting por IP (protección DDoS) |
-| `prometheus-fastapi-instrumentator` | ≥ 6.1 | Métricas Prometheus para monitoreo |
-
-### Pipeline ETL
+### ETL Pipeline
 
 | Librería | Versión | Propósito |
 |---|---|---|
-| `asyncpg` | ≥ 0.29 | Driver PostgreSQL asíncrono — pool de conexiones, queries parametrizadas |
-| `pandas` | ≥ 2.2 | Lectura de CSVs sin inferencia de tipos (`dtype=str`) |
-| `minio` | ≥ 7.2 | Cliente S3 para MinIO — subida de CSVs raw y Parquet |
-| `pydantic` v2 | ≥ 2.6 | Schemas dual-layer: `Raw*Row` (str) y `Clean*Row` (tipado) |
-| `structlog` | ≥ 24.1 | Logging estructurado JSON con contexto por worker |
-| `pydantic-settings` | ≥ 2.2 | Config tipada vía variables de entorno |
+| `asyncpg` | ≥ 0.29 | Driver PostgreSQL asíncrono |
+| `pandas` | ≥ 2.2 | Lectura de CSVs |
+| `minio` | 7.2.20 | Cliente S3 para MinIO |
+| `pydantic` v2 | ≥ 2.6 | Schemas Raw + Clean |
+| `pyarrow` | ≥ 14.0 | Engine para exportación Parquet |
+| `structlog` | ≥ 24.1 | Logging estructurado |
 
-### Base de Datos — PostgreSQL 15
-
-| Schema | Propósito | Tablas |
-|---|---|---|
-| **raw** | Staging — datos tal cual del CSV (TEXT) | `wc_winners`, `wc_matches`, `wc_players`, `dead_letter` |
-| **public** | Producción — datos tipados con FKs y constraints | `teams`, `tournaments`, `rounds`, `matches`, `match_players`, `users` |
-| **warehouse** | Materialized views para reporting | `vw_*` (refrescadas por W3) |
-| **audit** | Seguridad y trazabilidad | `auth_refresh_tokens`, `auth_password_resets`, `etl_run_log` |
-
-### Testing
+### Testing & Calidad
 
 | Herramienta | Versión | Propósito |
 |---|---|---|
 | `pytest` | ≥ 8.1 | Test runner |
-| `pytest-asyncio` | ≥ 0.23 | Soporte de fixtures y tests asíncronos |
-| `pytest-cov` | ≥ 5.0 | Reportes de cobertura |
-| `ruff` | ≥ 0.4 | Linter + formatter (100× más rápido que flake8) |
-| `mypy` | ≥ 1.9 | Type checking estricto con plugin de Pydantic |
-| `httpx` | ≥ 0.27 | Cliente HTTP asíncrono para tests de API |
-| `factory-boy` | ≥ 3.3 | Factories de datos de prueba |
+| `pytest-asyncio` | ≥ 0.23 | Tests asíncronos |
+| `pytest-cov` | ≥ 5.0 | Cobertura |
+| `ruff` | ≥ 0.4 | Linter + formatter |
+| `mypy` | ≥ 1.9 | Type checking estricto |
 
-### Tests Implementados
+---
 
+## Quick Reference — Comandos
+
+### Docker Compose
+
+```bash
+# Construir y levantar todos los servicios
+docker compose up -d --build
+
+# Reconstruir forzando recreación de contenedores
+docker compose up -d --build --force-recreate
+
+# Ver logs del worker (por service name)
+docker compose logs worker
+
+# Ver logs de un contenedor (por container name)
+docker logs fifa-workers
+
+# Listar servicios activos
+docker compose ps
+
+# Listar todos los servicios (incluyendo stopped)
+docker compose ps -a
+
+# Detener servicios
+docker compose stop
+
+# Detener y eliminar volúmenes (borra TODOS los datos)
+docker compose down -v
 ```
-workers/tests/
-└── unit/
-    ├── test_helpers.py      68 tests  — parse_*, normalize_*, clean_cell, slugify
-    ├── test_rules.py        35 tests  — 5 validadores (winners, matches, players, team, round)
-    ├── test_schemas.py      36 tests  — Raw + Clean Pydantic models
-    └── test_cli.py           8 tests  — argparse flags (ingest/clean/load/all)
-                    ─────────
-    Total:                  147 tests  (⚠  unit tests)
 
-tests/
-└── integration/
-    ├── conftest.py          — Fixtures: PG pool, MinIO client, sample CSVs
-    ├── test_w1_ingest.py    — W1: CSV → MinIO → raw.* staging
-    ├── test_w2_clean.py     — W2: raw.* → validation → dead_letter
-    └── test_w3_load.py      — W3: raw.* → public.* upsert → Parquet
-                    ─────────
-    Total:                   ~40 tests  (requiere PG + MinIO activos)
+### Pipeline ETL
+
+```bash
+# Pipeline completo (W1 → W2 → W3)
+fifa-worker --all
+
+# Etapas individuales
+fifa-worker --ingest      # W1
+fifa-worker --clean       # W2
+fifa-worker --load        # W3
+```
+
+### Tests
+
+```bash
+cd workers
+
+# Unit tests (sin dependencias externas)
+uv run pytest tests/unit/ -v
+
+# Integration tests (requiere PostgreSQL + MinIO)
+uv run pytest tests/integration/ -v -m integration
+
+# Todos los tests con cobertura
+uv run pytest -v --cov=worker
+
+# Lint + format
+uv run ruff check . && uv run ruff format .
 ```
 
 ---
 
-## Convenciones de Diseño
+## Comandos psql para Verificación
 
-### Seguridad (Anti SQL Injection)
+```bash
+# Conteo rápido de todas las tablas
+docker compose exec postgres psql -U champion07 -d data-world-cup -c "
+SELECT 'teams' AS tbl, COUNT(*) FROM public.teams
+UNION ALL SELECT 'tournaments', COUNT(*) FROM public.tournaments
+UNION ALL SELECT 'rounds', COUNT(*) FROM public.rounds
+UNION ALL SELECT 'matches', COUNT(*) FROM public.matches
+UNION ALL SELECT 'match_players', COUNT(*) FROM public.match_players;"
 
-Todas las queries usan **parámetros posicionales `$N` de asyncpg**:
+# Ver equipos cargados
+docker compose exec postgres psql -U champion07 -d data-world-cup \
+  -c "SELECT initials, name FROM public.teams ORDER BY initials LIMIT 10;"
 
-```python
-# ✅ Correcto — valores en $1, $2, nunca concatenados
-await conn.execute(
-    "INSERT INTO raw.wc_winners (_source_file, year) VALUES ($1, $2)",
-    filename, year,
-)
+# Ver torneos
+docker compose exec postgres psql -U champion07 -d data-world-cup \
+  -c "SELECT year, host_country, winner FROM public.tournaments ORDER BY year;"
 
-# ❌ Prohibido — construcción con f-strings o concatenación
-await conn.execute(
-    f"INSERT INTO raw.wc_winners VALUES ('{filename}', {year})"  # NO
-)
+# Ver últimos partidos
+docker compose exec postgres psql -U champion07 -d data-world-cup \
+  -c "SELECT match_id, match_datetime, stage, home_team_initials, away_team_initials, home_goals, away_goals FROM public.matches ORDER BY match_datetime DESC LIMIT 5;"
+
+# Ver staging crudo (raw)
+docker compose exec postgres psql -U champion07 -d data-world-cup \
+  -c "SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE _is_valid) AS validos, COUNT(*) FILTER (WHERE NOT _is_valid) AS rechazados FROM raw.wc_matches;"
+
+# Ver dead_letter (rechazos)
+docker compose exec postgres psql -U champion07 -d data-world-cup \
+  -c "SELECT _error_code, COUNT(*) FROM raw.dead_letter GROUP BY _error_code ORDER BY COUNT(*) DESC;"
+
+# Conexión interactiva
+docker compose exec -it postgres psql -U champion07 -d data-world-cup
+
+# Ejecutar migraciones manualmente
+docker compose exec postgres bash /docker-entrypoint-initdb.d/01-run_migrations.sh
 ```
 
-Los únicos f-strings permitidos son para nombres de tablas y columnas que vienen de `constants.py` (nunca de input externo).
-
-### Pipeline Idempotencia
-
-- DML usa `INSERT ... ON CONFLICT DO NOTHING` / `DO UPDATE`
-- W3 upserts con `ON CONFLICT` en todas las tablas public.*
-- W2 solo marca `_is_valid` sobre filas que estaban `IS NULL`
-- Múltiples ejecuciones del pipeline producen el mismo resultado
-
-### Separación de Capas (Raw vs Clean)
-
-```
-RAW (raw.*)                          CLEAN (public.*)
-──────────────────────────           ──────────────────────────
-Columna: TEXT                       Columna: tipada (INT, VARCHAR, TIMESTAMPTZ)
-Constraint: ninguna                 Constraint: NOT NULL, CHECK, FK, UNIQUE
-Índices: ninguno                    Índices: B-tree, GiST (trigram)
-Propósito: ingestión masiva         Propósito: queries de producción, reportes
-Dueño: W1                           Dueño: W3
-```
 ---
 
-## Getting Started
+## Servicios y Puertos
 
-### Prerrequisitos
+| Servicio | Host:Puerto | Propósito |
+|---|---|---|
+| PostgreSQL | `localhost:5434` | Base de datos ( :5432 dentro del contenedor) |
+| MinIO API | `localhost:9000` | Endpoint S3 |
+| MinIO Console | `localhost:9001` | Admin UI |
+| nginx | `localhost:8080` | Reverse proxy |
+
+---
+
+## Prerrequisitos y Setup
+
+### Requisitos
 
 - Python ≥ 3.12
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- Docker Engine + Compose
+- Docker Engine + Docker Compose v2.27+
 
 ### Variables de Entorno
 
-Copiar `.env.example` → `.env` y ajustar credenciales:
+Copiar `.env.example` a `.env` y ajustar:
+
+```bash
+cp .env.example .env
+```
+
+**⚠ Importante:** `S3_ENDPOINT` debe ser solo `host:port` sin scheme (`http://`). El cliente MinIO lo agrega automáticamente.
 
 ```env
 # PostgreSQL
@@ -332,12 +378,10 @@ POSTGRES_DB=data-world-cup
 # MinIO
 MINIO_ROOT_USER=admin
 MINIO_ROOT_PASSWORD=change_me_in_production
-S3_ENDPOINT=http://minio:9000
+MINIO_BUCKET=core-storage
+S3_ENDPOINT=minio:9000           # sin http://
 S3_ACCESS_KEY=admin
 S3_SECRET_KEY=change_me_in_production
-
-# Worker
-CSV_SOURCE_PATH=./data
 ```
 
 ### Inicializar Infraestructura
@@ -346,69 +390,172 @@ CSV_SOURCE_PATH=./data
 docker compose up -d postgres minio
 ```
 
-Las migraciones se ejecutan automáticamente via `db/scripts/run_migrations.sh` (orden alfabético: 000 → 010).
+Las migraciones (000 → 010) se ejecutan automáticamente al crear la base por primera vez via `/docker-entrypoint-initdb.d/`.
 
-### Ejecutar Pipeline ETL
+---
+
+## Ejecutar Pipeline ETL
 
 ```bash
-# Worker completo (W1 → W2 → W3)
+# Workers dentro del contenedor
 docker compose run --rm worker uv run fifa-worker --all
-
-# Etapas individuales
-docker compose run --rm worker uv run fifa-worker --ingest    # W1
-docker compose run --rm worker uv run fifa-worker --clean     # W2
-docker compose run --rm worker uv run fifa-worker --load      # W3
+docker compose run --rm worker uv run fifa-worker --ingest
+docker compose run --rm worker uv run fifa-worker --clean
+docker compose run --rm worker uv run fifa-worker --load
 ```
 
-### Ejecutar Tests
+O si el worker se ejecuta en modo servicio (definido en `docker-compose.yml` como `command: ["uv", "run", "fifa-worker", "--all"]`), se ejecuta automáticamente al iniciar:
+
+```bash
+docker compose up -d --build
+docker compose logs worker
+```
+
+---
+
+## Ejecutar Tests
 
 ```bash
 cd workers
 uv sync --extra dev
 
-# Unit tests (no requieren servicios)
+# Unit tests
 uv run pytest tests/unit/ -v
 
-# Integration tests (requieren PostgreSQL + MinIO activos)
+# Integration tests
 uv run pytest tests/integration/ -v -m integration
 
-# Todos los tests con cobertura
+# Cobertura completa
 uv run pytest -v --cov=worker
+```
+
+Resultado actual:
+```
+workers/tests/
+├── unit/
+│   ├── test_helpers.py     68 tests  (97% coverage)
+│   ├── test_rules.py       35 tests  (95% coverage)
+│   ├── test_schemas.py     36 tests  (99% coverage)
+│   └── test_cli.py          8 tests  (52% coverage)
+│
+├── integration/
+│   ├── test_w1_ingest.py   (requiere PG + MinIO)
+│   ├── test_w2_clean.py
+│   └── test_w3_load.py
+│
+├── Total coverage: 77% (949 statements)
+└── Ruff: 0 errors — All checks passed
 ```
 
 ---
 
 ## Test Architecture
 
-Los tests de este proyecto residen dentro de `workers/tests/` y **no** en una carpeta raíz `tests/`. Esta decisión es intencional y responde a las siguientes razones:
+Los tests residen en `workers/tests/` (no en una carpeta raíz) por las siguientes razones:
 
 | Razón | Explicación |
 |---|---|
-| **Aislamiento del dominio** | Los workers son el único componente con procesos ETL que requieren tests estructurales. El backend, frontend, y base de datos tienen sus propias validaciones (contrato OpenAPI, DDL checksums, etc.) que no necesitan un suite de tests unificado. |
-| **Descubrimiento automático** | `workers/pyproject.toml` define `testpaths = ["tests"]`. Al estar dentro del mismo directorio que el código que prueban, `pytest` descubre tests sin configuración extra ni `PYTHONPATH` manual. |
-| **Cohesión con el package manager** | `uv sync` y `uv run pytest` operan desde `workers/`. Tener los tests fuera obligaría a rutas relativas tipo `../workers/src/` o symlinks, añadiendo fricción al flujo de desarrollo. |
-| **Cobertura precisa** | `--cov=worker` apunta al módulo correcto sin incluir código de backend, frontend, u otros servicios que no corresponden al pipeline. |
-| **Portabilidad del worker** | El directorio `workers/` es autocontenido: tiene su `pyproject.toml`, `Dockerfile`, `src/`, y `tests/`. Se puede buildear, testear, y deployar sin depender de la estructura del monorepo raíz. |
+| **Aislamiento** | Los workers son el único componente ETL que requiere tests. Backend y frontend tienen sus propias validaciones. |
+| **Descubrimiento** | `pyproject.toml` define `testpaths = ["tests"]`. `uv run pytest` funciona sin PATH manual. |
+| **Cohesión** | `uv` opera desde `workers/`. Tests fuera obligarían a rutas relativas tipo `../workers/src/`. |
+| **Cobertura** | `--cov=worker` apunta al módulo correcto sin incluir backend u otros servicios. |
+| **Portabilidad** | `workers/` es autocontenido: pyproject.toml, Dockerfile, src/, tests/. Se puede buildear, testear y deployar sin depender del monorepo raíz. |
 
-### Estructura final
+### Ruff Configuration
+
+```toml
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "S", "B", "ANN"]
+per-file-ignores = { "tests/**" = ["S101", "ANN201", "ANN001", "ANN202"] }
+```
+
+- `S101` permitido en tests — `assert` es correcto en contexto de test
+- `ANN201`, `ANN001`, `ANN202` permitidos en tests — type annotations en tests añaden ruido sin beneficio
+
+---
+
+## Troubleshooting — Errores Conocidos
+
+### 1. Worker falla con `ValueError: path in endpoint is not allowed`
+
+**Causa:** `S3_ENDPOINT` en `.env` incluye `http://` (ej: `http://minio:9000`).
+
+El cliente MinIO **ya prepende** el scheme (`http://` o `https://`) automáticamente. Si el endpoint ya tiene scheme, se duplica:
 
 ```
-workers/tests/
-├── conftest.py                  # sys.path → src/ (PYTHONPATH para imports)
-│
-├── unit/                        # Tests unitarios — sin dependencias externas
-│   ├── test_helpers.py          # parse_*, normalize_*, clean_cell, slugify
-│   ├── test_rules.py            # Validadores: winners, matches, players, team, round
-│   ├── test_schemas.py          # Modelos Pydantic Raw + Clean
-│   └── test_cli.py              # Argumentos del CLI (argparse)
-│
-└── integration/                 # Tests de integración — requieren PG + MinIO
-    ├── __init__.py
-    ├── conftest.py              # Fixtures: asyncpg pool, MinIO client, CSVs sample
-    ├── test_w1_ingest.py        # CSV → MinIO → raw.* staging
-    ├── test_w2_clean.py         # raw.* → validación → dead_letter
-    └── test_w3_load.py          # raw.* → public.* upsert → Parquet
+"http://" + "http://minio:9000" = "http://http://minio:9000" → error
 ```
+
+**Solución:** Usar solo `host:port` sin scheme:
+```env
+S3_ENDPOINT=minio:9000
+```
+
+La función `get_minio_client()` en `storage.py` también tiene una capa defensiva que limpia cualquier scheme presente.
+
+### 2. Worker falla con `NotNullViolationError: null value in column "match_datetime"`
+
+**Causa:** Algunas filas en `wc_matches.csv` no tienen fecha (datetime vacío). `_load_matches()` intenta insertar `NULL` en una columna `NOT NULL`.
+
+**Solución:** W3 salta esas filas automáticamente:
+```
+w3.match_skip_no_datetime  match_id=43950010
+```
+
+### 3. Worker falla con `ForeignKeyViolationError: Key (match_id) is not present in table "matches"`
+
+**Causa:** `_load_match_players()` intenta insertar jugadores cuyo `match_id` no existe en `public.matches` (porque el match fue saltado por falta de fecha, o no existe en el CSV de matches).
+
+**Solución:** La función filtra contra `public.matches` y solo inserta players con match_id existente.
+
+### 4. Integration tests fallan con `password authentication failed`
+
+**Causa:** `conftest.py` usaba `postgres_port="5432"` pero Docker expone PostgreSQL en `5434:5432`.
+
+**Solución:** El puerto en el fixture es ahora `"5434"`.
+
+### 5. Integration tests fallan con `ForeignKeyViolationError` al truncar
+
+**Causa:** `truncate_public_tables()` omitía tablas como `referees`, `stadiums`, `tournament_teams`, `players` que tienen FKs hacia `teams`.
+
+**Solución:** La función ahora trunca en orden child→parent respetando todas las FKs.
+
+### 6. Worker no aparece en `docker compose ps`
+
+**Causa:** El service name es `worker` (no `fifa-workers`). `fifa-workers` es solo el `container_name`.
+
+```bash
+# ✅ Correcto
+docker compose logs worker
+
+# ❌ Incorrecto
+docker compose logs fifa-workers
+```
+
+### 7. `uv run pytest` falla por sintaxis TOML
+
+**Causa:** Comilla faltante en `pyproject.toml`:
+```toml
+"pyarrow>=14.0.0,     # ← falta "
+"pyarrow>=14.0.0",    # ← correcto
+```
+
+### 8. `match_datetime` NOT NULL violada
+
+**Solución implementada:** `_load_matches()` en `load_w3.py` skip rows con fecha nula:
+
+```python
+match_dt = parse_datetime_csv(str(r["datetime"])) if r["datetime"] else None
+if match_dt is None:
+    log.warning("w3.match_skip_no_datetime", match_id=match_id)
+    continue
+```
+
+### 9. Migration `005_w2_clean_columns.sql` destructiva
+
+**Problema:** Usaba `DROP TABLE IF EXISTS` + `CREATE TABLE` sin `IF NOT EXISTS`, destruyendo datos de `dead_letter` en cada re-ejecución.
+
+**Solución:** Cambiado a `CREATE TABLE IF NOT EXISTS` — ahora es 100% idempotente.
 
 ---
 
@@ -417,75 +564,55 @@ workers/tests/
 ```
 .
 ├── backend/                    # FastAPI REST API
-│   └── src/app/
-│       ├── main.py            # Entrypoint + OpenAPI
-│       ├── api/               # Route handlers
-│       ├── core/              # Config, security, DB
-│       ├── models/            # SQLAlchemy ORM
-│       └── schemas/           # Pydantic request/response
-│
 ├── workers/                    # ETL Pipeline
-│   ├── pyproject.toml         # Dependencias + tool config
-│   ├── Dockerfile             # Multi-stage build con uv
-│   ├── tests/
-│   │   ├── conftest.py        # PYTHONPATH: src/
-│   │   ├── unit/              # Unit tests (147 tests)
-│   │   │   ├── test_helpers.py
-│   │   │   ├── test_rules.py
-│   │   │   ├── test_schemas.py
-│   │   │   └── test_cli.py
-│   │   └── integration/      # Integration tests (requiere PG + MinIO)
-│   │       ├── conftest.py
-│   │       ├── test_w1_ingest.py
-│   │       ├── test_w2_clean.py
-│   │       └── test_w3_load.py
-│   └── src/worker/
-│       ├── cli.py             # CLI orchestrator (fifa-worker)
-│       ├── core/              # Config, DB pool, MinIO client
-│       │   ├── config.py      # Settings (pydantic-settings)
-│       │   ├── db.py          # Pool factory
-│       │   └── storage.py     # MinIO client wrapper
-│       ├── ingestion/         # W1 — Extract (pandas + asyncpg)
-│       │   └── ingest_w1.py
-│       ├── cleaning/          # W2 — Validate (rules + schemas)
-│       │   └── clean_w2.py
-│       ├── loading/           # W3 — Transform & Load
-│       │   └── load_w3.py
-│       ├── validators/        # Reglas de negocio + schemas Pydantic
-│       │   ├── rules.py       # 5 validadores
-│       │   └── schemas.py     # 10 modelos (Raw+Clean)
-│       └── utils/             # Helpers + constantes
-│           ├── constants.py   # Dataset config, regex, dominios
-│           └── helpers.py     # 15+ funciones puras
-│
-├── frontend/                   # Web UI
-├── db/                         # SQL scripts
-│   ├── migrations/            # DDL (000 → 010)
-│   ├── dml/                   # Seed data (dml_complete.sql)
-│   └── scripts/               # run_migrations.sh, run_dml.sh
-│
-├── data/                       # Fuentes de datos
-│   ├── raw/                   # CSVs originales (wc_*.csv)
-│   ├── processed/             # Datos limpios post-W2
-│   └── samples/               # Versiones reducidas para test
-│
-├── infra/                      # nginx, monitoreo
-├── docker-compose.yml          # Orquestación completa
-├── .env.example                # Template de entorno
+│   ├── pyproject.toml
+│   ├── Dockerfile
+│   ├── src/worker/
+│   │   ├── cli.py
+│   │   ├── core/
+│   │   │   ├── config.py       # Settings (pydantic-settings)
+│   │   │   ├── db.py
+│   │   │   └── storage.py      # MinIO client wrapper
+│   │   ├── ingestion/          # W1
+│   │   │   └── ingest_w1.py
+│   │   ├── cleaning/           # W2
+│   │   │   └── clean_w2.py
+│   │   ├── loading/            # W3
+│   │   │   └── load_w3.py
+│   │   ├── validators/
+│   │   │   ├── rules.py
+│   │   │   └── schemas.py
+│   │   └── utils/
+│   │       ├── constants.py
+│   │       └── helpers.py
+│   └── tests/
+│       ├── unit/
+│       │   ├── test_helpers.py
+│       │   ├── test_rules.py
+│       │   ├── test_schemas.py
+│       │   └── test_cli.py
+│       └── integration/
+│           ├── conftest.py
+│           ├── test_w1_ingest.py
+│           ├── test_w2_clean.py
+│           └── test_w3_load.py
+├── frontend/
+├── db/
+│   ├── migrations/             # 000 → 010
+│   ├── dml/
+│   │   └── dml_complete.sql
+│   └── scripts/
+│       ├── run_migrations.sh
+│       └── run_dml.sh
+├── data/
+│   ├── raw/                    # CSVs originales
+│   ├── processed/
+│   └── samples/
+├── infra/
+│   └── nginx/
+├── docker-compose.yml
 └── README.md
 ```
-
----
-
-## Servicios y Puertos
-
-| Servicio | URL | Propósito |
-|---|---|---|
-| FastAPI | `http://localhost:8000/docs` | Swagger UI |
-| PostgreSQL | `localhost:5434` | Base de datos (vía host) |
-| MinIO API | `http://localhost:9000` | Endpoint S3 |
-| MinIO Console | `http://localhost:9001` | Admin UI |
-| nginx | `http://localhost:8080` | Reverse proxy |
 
 ---
 
@@ -494,7 +621,7 @@ workers/tests/
 ```
 MIT License
 
-Copyright (c) 2024 Platform Data Studio
+Copyright (c) 2026 Platform Data Studio
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -510,7 +637,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHER LOSSES, ARISING
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
