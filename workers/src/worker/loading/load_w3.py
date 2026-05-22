@@ -349,12 +349,17 @@ async def _load_matches(conn: asyncpg.Connection) -> int:
 
 
 async def _load_match_players(conn: asyncpg.Connection) -> int:
+    existing_match_ids = {
+        r["match_id"]
+        for r in await conn.fetch("SELECT match_id FROM public.matches")
+    }
+
     valid_match_ids = [
-        parse_int(r["match_id"])
+        mid
         for r in await conn.fetch(
             "SELECT DISTINCT match_id FROM raw.wc_players WHERE _is_valid = TRUE"
         )
-        if parse_int(r["match_id"]) is not None
+        if (mid := parse_int(r["match_id"])) is not None and mid in existing_match_ids
     ]
     if valid_match_ids:
         await conn.execute(
@@ -374,7 +379,7 @@ async def _load_match_players(conn: asyncpg.Connection) -> int:
     for r in rows:
         round_id = parse_int(r["round_id"])
         match_id = parse_int(r["match_id"])
-        if round_id is None or match_id is None:
+        if round_id is None or match_id is None or match_id not in existing_match_ids:
             continue
 
         shirt_raw = parse_int(r["shirt_number"])
