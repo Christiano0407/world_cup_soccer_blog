@@ -49,8 +49,24 @@ servers:
 # ----------------------------------------------------------------------------------------------------------------- #
 #  === Security Scheme ===
 # ----------------------------------------------------------------------------------------------------------------- #
-
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: Bearer
+      bearerFormat: JWT
+      description: "JWT Access Token. Obtener en POST (CRUD): /api/v1/auth/login"
+
+    RefreshCookie: 
+      type: apiKey
+      in: cookie
+      name: refresh_token
+      description: "HTTP-only cookie con refresh token. Se establece automáticamente en login."
+
+# ----------------------------------------------------------------------------------------------------------------- #
+#  === Schemes ===
+# ----------------------------------------------------------------------------------------------------------------- #
+
   schemas:
 
     # = Shared = 
@@ -166,3 +182,33 @@ components:
       properties:
         current_password: { type: string }
         new_password: { type: string, min_length: 8, max_length: 128 }
+
+    # === Teams (Tipado) === #
+    TeamOut: 
+      type: object
+      required: [ team_id, initials, name, active ]
+      properties:
+        team_id:        { type: integer, example: 1 }
+        initials:       { type: string, example: "BRA" }
+        name:           { type: string, example: "Brazil" }
+        confederation:  { type: string, nullable: true, example: "CONMEBOL"}
+        fifa_code:      { type: string, nullable: true, example: "BRA" }
+        active:         { type: boolean, example: true }
+
+    TeamStatsOut: 
+      type: object
+      properties:
+        initials:       { type: string, example: "BRA" }
+        name:           { type: string, example: "Brazil" }
+        confederation:  { type: string, nullable: true}
+        tournaments_played: { type: integer, example: 22 }
+        titles:         { type: integer, example: 5 }
+        runner_ups:     { type: integer, example: 2 }
+        total_matches:  { type: integer, example: 114 }
+        wins:           { type: integer, example: 76 }
+        draws:          { type: integer, example: 18 }
+        losses:         { type: integer, example: 3 }
+        goals_scored:   { type: integer, example: 237 }
+        goals_conceded: { type: integer, example: 101 }
+        goals_difference: { type: integer, example: 136 }
+        win_rate_pct:   { type: number, example: 66.67 }
