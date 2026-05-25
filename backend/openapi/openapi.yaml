@@ -230,6 +230,22 @@ components:
         active:         { type: boolean, nullable: true }
 
     # === Tournament (Tipado) === #
+    TournamentOut:
+      type: object
+      required: [tournament_id, year, host_country, winner, runners_up, goals_scored, qualified_teams, matches_played]
+      properties:
+        tournament_id:    { type: integer, example: 1 }
+        year:             { type: integer, example: 1930 }
+        host_country:     { type: string, example: "Uruguay" }
+        winner:           { type: string, example: "Uruguay" }
+        runner_ups:       { type: string, example: "Argentina" }
+        third_place:      { type: string, nullable: true, example: "USA" }
+        fourth_place:     { type: string, nullable: true, example: "Yugoslavia" }
+        goals_scored:     { type: integer, example: 70 }
+        qualified_teams:  { type: integer, example: 13 }
+        matches_played:   { type: integer, example: 18 }
+        attendance_total: { type: integer, nullable: true,  example: 590549 }
+        avg_goals_per_match: { type: number, nullable: true,  example: 3.89 }
 
 
     # === Matches (Tipado) === #
