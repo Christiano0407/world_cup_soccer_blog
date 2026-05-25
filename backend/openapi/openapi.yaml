@@ -1,0 +1,75 @@
+openapi: "3.1.0"
+
+
+info:
+  title: FIFA World Cup Platform API
+  version: "0.1.0"
+  description: |
+    ## FIFA World Cup Platform 
+    
+      API REST para la plataforma de Datos históricos del Mundial de Fútbol FIFA. 
+
+    ### Autenticación (AUTH / Authetintication) 
+      La Mayoría de los "Endpoints", son **públicos++ (Lectura de datos históricos).
+      Los "Endpoints" protegidos usan **JWT Bearer Token**.
+
+    ```
+    Authorization: Bearer <access_token>
+    ```
+ 
+    Obtén el token en `POST /api/v1/auth/login`.
+    El `refresh_token` se almacena en una cookie **HTTP-only** — no es accesible por JavaScript.
+ 
+    ### Rate Limiting (Límite de Peticiones)
+    | Tipo            | Límite       |
+    |-----------------|--------------|
+    | Público         | 60 req/min   |
+    | Auth endpoints  | 10 req/min   |
+ 
+    ### Versionado
+    Todos los endpoints de producción están bajo `/api/v1/`.
+    Swagger UI disponible solo en entornos `development` y `staging`.
+
+  
+  contact:
+    name: Chris Velázquez | Platform Team
+  license: 
+    name: MIT
+
+  
+servers:
+  - url: http://localhost:8000
+    description: Development
+  - url: https://fifaplatform.dev
+    description: Staging
+  - url: https://fifaplatform.com
+    description: Production/Deploy
+
+
+# ----------------------------------------------------------------------------------------------------------------- #
+#  === Security Scheme ===
+# ----------------------------------------------------------------------------------------------------------------- #
+
+schemas:
+
+  # = Shared = 
+  Error:
+    type: object
+    required: [detail]
+    properties:
+      detail:
+        type: string
+        example: "Recurso no encontrado |Data not search"
+
+  ValidationError:
+    type: object
+    required: [detail]
+    properties:
+      detail:
+      type: array
+      items:
+        type: object
+        properties:
+          loc: {type: array, items: {type: string}}
+          msg: {type: string}
+          type: {type: string}
