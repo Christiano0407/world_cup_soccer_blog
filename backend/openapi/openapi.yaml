@@ -361,7 +361,55 @@ components:
     # === Analytics (Tipado | Análisis de datos) === #
 
 
-    # === ADMIN (Tipado | Roles del Usuario - permisos) === #
+    # === ADMIN (Tipado | Roles del Usuario - permisos) | ETL Execute === #
+      AdminUserOut:
+        type: object
+        properties:
+          user_id:      { type: string, format: uuid }
+          email:        { type: string, format: email }
+          display_name: { type: string, nullable: true }
+          role:         { type: string, enum: [admin, editor, reader] }
+          is_active:    { type: boolean }
+          created_at:   { type: string, format: date-time }
+          updated_at:   { type: string, format: date-time }
+ 
+      AdminUserUpdate:
+        type: object
+        properties:
+          role:      { type: string, enum: [admin, editor, reader], nullable: true }
+          is_active: { type: boolean, nullable: true }
+  
+      EtlTriggerIn:
+        type: object
+        properties:
+          dataset:
+            type: string
+            enum: [all, winners, matches, players]
+            default: all
+  
+      EtlStatusOut:
+        type: object
+        properties:
+          run_id:       { type: integer, nullable: true }
+          dataset:      { type: string, nullable: true }
+          worker:       { type: string, nullable: true }
+          status:       { type: string, enum: [running, success, failed, partial] }
+          started_at:   { type: string, format: date-time, nullable: true }
+          finished_at:  { type: string, format: date-time, nullable: true }
+          rows_loaded:  { type: integer, nullable: true }
+          rows_rejected: { type: integer, nullable: true }
+          duration_s:   { type: number, nullable: true }
+          triggered_by: { type: string, nullable: true }
+  
+      DeadLetterOut:
+        type: object
+        properties:
+          dl_id:         { type: integer }
+          source_table:  { type: string }
+          source_row_id: { type: integer }
+          error_code:    { type: string, example: "MISSING_YEAR" }
+          error_detail:  { type: string, nullable: true }
+          rejected_at:   { type: string, format: date-time }
 
 
 # ─── RESPONSES REUTILIZABLES ───────────────────────────────────────────────
