@@ -64,7 +64,7 @@ components:
       description: "HTTP-only cookie con refresh token. Se establece automáticamente en login."
 
 # ----------------------------------------------------------------------------------------------------------------- #
-#  === Schemes ===
+#  === Schemes [Datos / "components"] ===
 # ----------------------------------------------------------------------------------------------------------------- #
 
   schemas:
