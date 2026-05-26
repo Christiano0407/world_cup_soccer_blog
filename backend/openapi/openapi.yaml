@@ -450,6 +450,10 @@ components:
 
     Conflict: 
       description: Conflicto (Conflict) - Recurso ya existe ( No podemos obtener doble)
+      content:
+        application/json:
+          schema:
+            { $ref: "#/components/schemas/Error"}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ───- === PARAMETERS REUTILIZABLES ==== -----
@@ -548,6 +552,28 @@ paths:
     # ══════════════════════════════════════════════════════════════ #
     # AUTH
     # ══════════════════════════════════════════════════════════════ #
+  /api/v1/auth/register:
+    post: 
+      tags: [Authentication]
+      summary: Registrar nuevo Usuario | Register new User
+      operationId: auth_register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {ref: "$#/components/schemas/RegisterIn"}
+      responses:
+        "201":
+          description: Usuario Creado - Retorna Acceso al Token (Access Token)
+          headers: 
+            Set-Cookies: 
+              description: "Refresh_token HTTP-only cokkies"
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenOut"}
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
     # ══════════════════════════════════════════════════════════════ #
     # TEAMS
