@@ -625,6 +625,58 @@ paths:
       responses: 
         "204": { description: Sesión Cerrada - Cookies Eliminadas }
         "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/auth/me:
+    get:
+      tags: [Authentication]
+      summary: Perfil del usuario autenticado
+      operationId: auth_me_get
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Perfil del usuario
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserOut" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+    patch:
+      tags: [Authentication]
+      summary: Actualizar perfil propio
+      description: Solo permite cambiar `display_name`. El rol no es modificable por el usuario.
+      operationId: auth_me_patch
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserUpdateIn" }
+      responses:
+        "200":
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserOut" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/auth/change-password:
+    post:
+      tags: [Authentication]
+      summary: Cambiar contraseña
+      operationId: auth_change_password
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChangePasswordIn" }
+      responses:
+        "204": { description: Contraseña actualizada }
+        "400": { description: Contraseña actual incorrecta }
+        "401": { $ref: "#/components/responses/Unauthorized" }
       
 
     # ══════════════════════════════════════════════════════════════ #
