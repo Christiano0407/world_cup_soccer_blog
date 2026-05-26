@@ -614,6 +614,17 @@ paths:
             application/json: 
               schema: { $ref: "#/components/schemas/TokenOut"}
         "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Cerrar Sesión (Close Session)
+      operationId: auth_logout
+      security: 
+        - BearerAuth: []
+      responses: 
+        "204": { description: Sesión Cerrada - Cookies Eliminadas }
+        "401": { $ref: "#/components/responses/Unauthorized" }
       
 
     # ══════════════════════════════════════════════════════════════ #
