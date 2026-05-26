@@ -247,11 +247,90 @@ components:
         attendance_total: { type: integer, nullable: true,  example: 590549 }
         avg_goals_per_match: { type: number, nullable: true,  example: 3.89 }
 
+      TournamentListOut:
+        type: object
+        properties:
+          tournament_id:  { type: integer, example: 1 }
+          year:           { type: integer, example: 1930 }
+          host_country:   { type: string, example: "Uruguay" }
+          winner:         { type: string, example: "Uruguay" }
+          goals_scored:   { type: integer, example: 70 }
+          matches_played: { type: integer, example: 18 }
+
+      TournamentIn:
+        type: object
+        required: [year, host_country, winner, runners_up, goals_scored, qualified_teams, matches_played]
+        properties:
+          year:             { type: integer, minimum: 1930, maximum: 2030 }
+          host_country:     { type: string, maxlength: 100}
+          winner:           { type: string, maxlength: 100 }
+          runner_ups:       { type: string, maxLength: 100 }
+          third_place:      { type: string, nullable: true }
+          fourth_place:     { type: string, nullable: true }
+          goals_scored:     { type: integer, minimum: 0}
+          qualified_teams:  { type: integer, minimum: 1, maximum: 48 }
+          matches_played:   { type: integer, minimum: 1 }
+          attendance_total: { type: integer, nullable: true}
+
+      TournamentUpdate: 
+        type: object
+        properties:
+          winner:           { type: string, nullable: true }
+          runner_ups:       { type: string, nullable: true }
+          goals_scored:     { type: integer, minimum: 0, nullable: true }
+          attendance_total: { type: integer, nullable: true }
+
 
     # === Matches (Tipado) === #
+      MatchOut:
+        type: object
+        required: [match_id, tournament_id, year, stage, match_datetime, home_team_initials, away_team_initials, home_goals, away_goals]
+        properties:
+          match_id:           { type: integer, example: 1 }
+          tournament_id:      { type: integer, example: 1 }
+          year:               { type: integer, example: 1930 }
+          stage:              { type: string, example: "Group 1" }
+          match_datetime:     { type: string, format: date-time, example: "1930-07-13T15:00:00Z" }
+          stadium:            { type: string, nullable: true, example: "Pocitos" }
+          city:               { type: string, nullable: true, example: "Montevideo" }
+          home_team_initials: { type: string, example: "FRA" }
+          away_team_initials: { type: string, example: "MEX" }
+          home_team_name:     { type: string, nullable: true, example: "France" }
+          away_team_name:     { type: string, nullable: true, example: "Mexico" }
+          home_goals:         { type: integer, example: 4 }
+          away_goals:         { type: integer, example: 1 }
+          ht_home_goals:      { type: integer, nullable: true, example: 3 }
+          ht_away_goals:      { type: integer, nullable: true, example: 0 }
+          win_conditions:     { type: string, nullable: true, example: null }
+          attendance:         { type: integer, nullable: true, example: 4444 }
+          referee:            { type: string, nullable: true, example: "LOMBARDI Domingo (URU)" }
+ 
+    MatchListOut:
+      type: object
+      properties:
+        match_id:           { type: integer }
+        year:               { type: integer }
+        stage:              { type: string }
+        match_datetime:     { type: string, format: date-time }
+        home_team_initials: { type: string }
+        away_team_initials: { type: string }
+        home_goals:         { type: integer }
+        away_goals:         { type: integer }
 
 
     # === Players (Tipado) === #
+      PlayerAppearOut:
+        type: object
+        properties:
+          player_match_id: { type: integer }
+          match_id: { type: integer }
+          team_initials: { type: string, example: "FRA" }
+          coach_name: { type: string, nullable: true, example: "CAUDRON Raoul (FRA)" }
+          lineup_type: { type: string, enum:[S, N], description: "S=Titular & N=Suplente"}
+          shirt_number: { type: integer, nullable: true }
+          player_name: { type: string, example: "Alex Thepot" }
+          position: { type: string, nullable: true, enum: [GK, DF, MF, FW, null] }
+          event_code: { type: string, nullable: true, example: "G", description: "G=gol, Y=Yellw Card, R=Red Card, OG=Propia"  }
 
 
     # === Analytics (Tipado | Análisis de datos) === #
