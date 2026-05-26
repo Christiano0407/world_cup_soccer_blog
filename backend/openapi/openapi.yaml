@@ -549,8 +549,8 @@ paths:
               schema:
                 { $ref:"$/components/schemas/ComponentsHealthOut" }
 
-    # ══════════════════════════════════════════════════════════════ #
-    # AUTH
+    # ══════════════════════════════════════════════════════════════ # 
+    # AUTH [CRUD:  Create (POST),  Read (GET), Update (PUT/PATH), Delete (DELETE)] - HTTP Status / Methods 
     # ══════════════════════════════════════════════════════════════ #
   /api/v1/auth/register:
     post: 
