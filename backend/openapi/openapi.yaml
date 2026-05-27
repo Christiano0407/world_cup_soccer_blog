@@ -683,6 +683,52 @@ paths:
     # TEAMS
     # ══════════════════════════════════════════════════════════════ #
 
+  /api/v1/teams:
+    get:
+      tags: [Teams]
+      summary: Listar (orden) todos las Selecciones de Fútbol
+      operationId: teams_list
+      parameters:
+        - name: active
+          in: query
+          schema: { type: boolean }
+          description: Filtrar por Selecciones (equipos) Activos/disueltos (eliminados) 
+        - name: confederation
+          in: query
+          schema: { type: string }
+          description: "UEFA | CONMEBOL | CAF | AFC | CONCACAF | OFC"
+      responses: 
+        "200":
+          description: Lista de Selecciones (Equipos)
+          content: 
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TeamOut" }
+
+    post: 
+      tags: [Teams]
+      summary: Crear selección/equipo (admin)
+      operationId: teams_create
+      security: 
+        - BearerAuth: []
+      requestBody: 
+        required: true
+        content: 
+          application/json:
+            schema:
+              { $ref: "#/components/schemas/TeamIn" }
+      responses: 
+        "201":
+          description: Equipo/Selección creado
+          content: 
+            application/json:
+              schema:
+                { $ref: "#/components/schemas/TeamOut" }
+        "401": { $ref: "#/components/schemas/Unauthorized" }
+        "403": { $ref: "#/components/schemas/Forbidden" }
+        "409": { $ref: "#/components/schemas/Conflict" }
+
     # ══════════════════════════════════════════════════════════════ #
     # TOURNAMENTS
     # ══════════════════════════════════════════════════════════════ #
