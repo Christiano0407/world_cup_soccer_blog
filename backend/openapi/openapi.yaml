@@ -828,6 +828,37 @@ paths:
                         items: { $ref: "#/components/schemas/MatchListOut" }
         "404": { $ref: "#/components/responses/NotFound"}
 
+  /api/v1/teams/{initials}/vs/{opponent}:
+    get:
+      tags: [Teams]
+      summary: Head-to-Head (Cara a cara) entre dos Selecciones
+      operationId: teams_head_to_head
+      parameters:
+        - $ref: "#/components/parameters/InitialsParam"
+        - name: opponent
+          in: path
+          required: true
+          schema:
+            { type: string, minLength: 2, maxLength: 3 }
+      responses:
+        "200":
+          description: Historial directo entre las dos selecciones/equipos
+          content: 
+            application/json:
+              schema:
+                type: object
+                properties:
+                    team_a:           { type: string }
+                    team_b:           { type: string }
+                    total_matches:    { type: integer }
+                    team_a_wins:      { type: integer }
+                    team_b_wins:      { type: integer }
+                    draws:            { type: integer }
+                    team_a_goals:     { type: integer }
+                    team_b_goals:     { type: integer }
+                    first_encounter:  { type: integer }
+                    last_encounter:   { type: integer }
+
     # ══════════════════════════════════════════════════════════════ #
     # TOURNAMENTS
     # ══════════════════════════════════════════════════════════════ #
