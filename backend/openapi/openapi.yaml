@@ -729,6 +729,73 @@ paths:
         "403": { $ref: "#/components/schemas/Forbidden" }
         "409": { $ref: "#/components/schemas/Conflict" }
 
+  /api/v1/teams/ranking:
+    get:
+      tags: [Teams]
+      summary: Ranking Histórico de Selecciones de Fútbol en el Mundial
+      operationId: teams_ranking
+      parameters:
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [titles, wins, goals_scored, total_matches]
+            default: titles
+        - name: min_matches
+          in: query
+          schema: 
+            { type: integer, default: 3 }
+          description: Mínimo de Partidos jugados para aparecer
+      responses: 
+        "200":
+          description: Ranking de la Selección/Equipo con stats (Estadísticas) históricas
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TeamStatsOut" }
+
+  /api/v1/teams/{initials}:
+    get: 
+      tags: [Teams]
+      summary: Detalles (Details) & Estadísticas (stats) de una Selección/Equipo
+      operationId: teams_get
+      parameters:
+        - $ref: "#/components/parameters/InitialsParam"
+      responses:
+        "200":
+          description: Estadísticas (Stats) históricas de la Selección / Equipo
+          content: 
+            application/json: 
+              schema:
+                { $ref: "#/components/parameters/InitialsParam" }
+        "404": { $ref: "#/components/responses/NotFound"}
+    
+    patch:
+      tags: [Teams]
+      summary: Actualizar selección/equipo (admin) 
+      operationId: teams_update
+      security: 
+        - BearerAuth: []
+      parameters: 
+        - $ref: "#/components/parameters/InitialsParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              { $ref: "/components/schemas/TeamUpdate" }
+      responses:
+        "200":
+          description: Selección/Equipo Actualizado (Información)
+          content: 
+            application/json: 
+              schema:
+                { $ref: "#/components/schemas/TeamOut" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
     # ══════════════════════════════════════════════════════════════ #
     # TOURNAMENTS
     # ══════════════════════════════════════════════════════════════ #
