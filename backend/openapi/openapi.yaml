@@ -796,6 +796,38 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/v1/teams/{initials}/matches:
+    get:
+      tags: [Teams]
+      summary: Historial de partidos de una Seleciión/Equipos en un Mundial
+      operationId: team_matches
+      parameters:
+        - $ref: "#/components/parameters/InitialsParam"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+        - name: year 
+          in: query
+          schema:
+            { type: integer }
+        - name: stage
+          in: query
+          schema:
+            { type: string }
+      responses:
+        "200":
+          description: Partidos Paginados (por página) de cada selección/equipo
+          content: 
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/MatchListOut" }
+        "404": { $ref: "#/components/responses/NotFound"}
+
     # ══════════════════════════════════════════════════════════════ #
     # TOURNAMENTS
     # ══════════════════════════════════════════════════════════════ #
