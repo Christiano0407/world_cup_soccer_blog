@@ -862,6 +862,55 @@ paths:
     # ══════════════════════════════════════════════════════════════ #
     # TOURNAMENTS
     # ══════════════════════════════════════════════════════════════ #
+  /api/v1/tournaments:
+    get:
+      tags: [Tournaments]
+      summary: Listar todas las ediciones del Mundial (Torneo)
+      operationId: tournament_list
+      parameters: 
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+        - name: year_from
+          in: query
+          schema: { type: integer, minimum: 1930 }
+        - name: year_to
+          in: query
+          schema: { type: integer, maximum: 2030 }
+      responses: 
+        "200":
+          description: Ediciones (Mundial en orden), paginadas
+          content: 
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      items: 
+                        type: array
+                        items: { $ref: "#/components/schemas/TournamentListOut" } 
+
+    post:
+      tags: [Tournaments]
+      summary: Crear Ediciones (Torneo) - (admin)
+      operationId: tournaments_create
+      security:
+        - BearerAuth: []
+      requestBody: 
+        required: true
+        content:
+          application/json:
+            schema:
+              { $ref: "#/components/schemas/TournamentIn"}
+      responses:
+        "201": 
+          description: Edición (Torneo) Creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TournamentOut" }
+        "401": { $ref: "#/components/schemas/Unauthorized" }
+        "403": { $ref: "#/components/schemas/Forbidden" }
+        "409": { $ref: "#/components/schemas/Conflict" }
 
     # ══════════════════════════════════════════════════════════════ #
     # MATCHES
