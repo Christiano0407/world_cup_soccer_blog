@@ -970,6 +970,39 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden"}
         "404": { $ref: "#/components/responses/NotFound"}
 
+  /api/v1/tournaments/{year}/matches:
+    get: 
+      tags: [Tournaments]
+      summary: Partidos jugados por edición (Torneo) | Por año
+      operationId: tournaments_matches
+      parameters: 
+        - $ref: "#/components/parameters/YearParam"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+        - name: stage
+          in: query
+          schema:
+            { type: string }
+          description: "filtrar por fase (Etapas del torneo): Group 1, Final, etc."
+      responses: 
+        "200":
+          description: Partidos paginados (orden) de la edición (Por torneo)
+          content: 
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties: 
+                      items: 
+                        type: array
+                        items: { $ref: "#/components/schemas/MatchListOut"}
+        "404": { $ref: "#/components/responses/NotFound" }
+
+
+
+
+
     # ══════════════════════════════════════════════════════════════ #
     # MATCHES
     # ══════════════════════════════════════════════════════════════ #
