@@ -912,6 +912,64 @@ paths:
         "403": { $ref: "#/components/schemas/Forbidden" }
         "409": { $ref: "#/components/schemas/Conflict" }
 
+  /api/v1/tournaments/{year}: 
+    get: 
+      tags: [Tournaments]
+      summary: Mundiales (torneo), detallado por año
+      operationId: tournaments_get
+      parameters:
+        - $ref: "#/components/parameters/YearParam"
+      responses:
+        "200":
+          description: Edición (torneo por año) con estadísticas (stats) completas
+          content: 
+            application/json:
+              schema:
+                { $ref: "#/components/schemas/TournamentOut"}
+        "404": { $ref: "#/components/responses/NotFound" }
+
+    patch:
+      tags: [Tournaments]
+      summary: Actualizar edición - Mundial por año (admin)
+      operationId: tournaments_update
+      security: 
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/YearParam"
+      requestBody:
+        required: true
+        content: 
+          application/json: 
+            schema:
+              { $ref: "#/components/schemas/TournamentUpdate" }
+      responses: 
+        "200":
+          description: edición (Torneo Mundial) actualizado
+          content: 
+            application/json:
+              schema:
+                { $ref: "#/components/schemas/TournamentOut"}
+        "401": { $ref: "#/components/responses/unauthorized" }
+        "403": { $ref: "#/components/responses/forbidden" }
+        "404": { $ref: "#/components/responses/notFound" }
+
+    delete: 
+      tags: [Tournaments]
+      summary: Eliminar edición mundialista (Torneo) 
+      description: |
+        **ADVERTENCIA**: Solo eliminar si no tiene matches asociados.
+        Los datos históricos no deben eliminarse — usar con precaución.
+      operationId: tournaments_delete
+      security: 
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/YearParam"
+      responses: 
+        "204": {description: "Edition Delete (Torneo Eliminado)"}
+        "401": { $ref: "#/components/responses/Unauthorized"}
+        "403": { $ref: "#/components/responses/Forbidden"}
+        "404": { $ref: "#/components/responses/NotFound"}
+
     # ══════════════════════════════════════════════════════════════ #
     # MATCHES
     # ══════════════════════════════════════════════════════════════ #
