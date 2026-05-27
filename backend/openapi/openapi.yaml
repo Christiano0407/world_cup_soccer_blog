@@ -999,8 +999,41 @@ paths:
                         items: { $ref: "#/components/schemas/MatchListOut"}
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/v1/tournaments/{year}/top-scorers:
+    get: 
+      tags: [Tournaments]
+      operationId: tournaments_top_scorers
+      parameters: 
+        - $ref: "#/components/parameters/YearParam"
+        - name: top
+          in: query
+          schema: { type: integer, default: 10, minimum:1, maximum: 50 }
+      responses: 
+        "200": 
+          description: Top goleadores de la edición (Torneo | Mundial)
+          content: 
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TopScorerOut" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
-
+  /api/v1/tournaments/{year}/teams: 
+    get: 
+      tags: [Tournaments]
+      summary: Equipos/Selecciones participantes por edición (Torneo/Mundial)
+      operationId: tournaments_teams
+      parameters: 
+        - $ref: "#/components/parameters/YearParam"
+      responses: 
+        "200":
+          description: Equipos/Selecciones que participaron en esa edición (Torneo/Mundial)
+          content: 
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TeamOut"}
+        "404": { $ref: "#/components/responses/NotFound"}        
 
 
     # ══════════════════════════════════════════════════════════════ #
