@@ -1232,12 +1232,43 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
 
     # ══════════════════════════════════════════════════════════════ #
-    # ANALYTICS — JSON para D3.js / dashboards
+    # ANALYTICS [WORKERS] — JSON para D3.js / dashboards 
     # ══════════════════════════════════════════════════════════════ #
 
     # ══════════════════════════════════════════════════════════════ #
-    # ADMIN — role: admin required
+    # ADMIN — role: admin required [admin, editor, reader]
     # ══════════════════════════════════════════════════════════════ #
+  /api/v1/admin/users:
+    get:
+      tags: [Admin]
+      summary: Listar (Ordenar) los usuario que tienen acceso & permisos (role)
+      operationId: admin_user_list
+      security: 
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+        - name: role
+          in: query
+          schema: { type: string, enum: [admin, editor, reader] }
+        - name: is_active
+          in: query
+          schema: { type: boolean }
+      responses: 
+        "200": 
+          description: Usuarios Paginados (ordenados por Páginas & Roles)
+          content: 
+            application/json: 
+              schema:
+                allOf:
+                  - ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties: 
+                      items: 
+                        type: array
+                        items: { $ref: "#/components/schemas/AdminUserOut" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ====== TAGS — orden y descripción en Swagger UI ======
