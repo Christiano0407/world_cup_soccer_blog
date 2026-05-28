@@ -1180,10 +1180,37 @@ paths:
         "200":
           description: Búsqueda (search) jugadores encontrados
           content:
-            application/jason:
+            application/json:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/PlayerAppearanceOut" }
+
+  /api/v1/players/top-scorers:
+    get: 
+      tags: [Players]
+      summary: Goleadores Históricos del Mundial/Torneo en la Historia
+      operationId: players_top-scorers
+      parameters:
+        - name: top
+          in: query
+          schema:
+            { type: integer, default: 10, minimum: 1, maximum: 50 }
+        - name: team
+          in: query
+          schema:
+            { type: string, maxLength: 3 }
+        - name: position
+          in: query
+          schema:
+            { type: string, enum: [GK, DF, MF, FW] }
+      responses: 
+        "200": 
+          description: Top (máximos) goleadores de todos los Mundiales (Torneo)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TopScorerOut" }
 
     # ══════════════════════════════════════════════════════════════ #
     # ANALYTICS — JSON para D3.js / dashboards
