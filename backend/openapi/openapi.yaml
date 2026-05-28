@@ -1404,6 +1404,67 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/v1/admin/warehouse/refresh:
+    post: 
+      tags: [Admin]
+      summary: Forzar refresh de visitas materializadas
+      description: Llama a 'warehouse.refresh_all()' en PostgreSQL
+      operationId: admin_warehouse_refresh 
+      security: 
+        - BearerAuth: []
+      responses: 
+        "200":
+          description: Refresh completado
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: "ok" }
+                  message: { type: string, example: "All warehouse views refreshed" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }  
+
+  /api/v1/admin/audit-log:
+    get:
+      tags: [Admin]
+      summary: Log (History) de cambios en tablas de producción
+      operationId: admin_audit_log
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+        - name: table_name
+          in: query
+          schema: { type: string }
+          description: "Filtrar por tabla: tournaments, matches, users, etc."
+        - name: operation
+          in: query
+          schema: { type: string, enum: [I, U, D] }
+          description: "I=insert, U=update, D=delete"
+      responses:
+        "200":
+          description: Entradas del audit log (History) paginadas (Orden de ejecución)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        log_id:      { type: integer }
+                        schema_name: { type: string }
+                        table_name:  { type: string }
+                        operation:   { type: string, enum: [I, U, D] }
+                        changed_by:  { type: string }
+                        changed_at:  { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }       
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ====== TAGS — orden y descripción en Swagger UI ======
 # ─────────────────────────────────────────────────────────────────────────────
