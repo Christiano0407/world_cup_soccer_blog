@@ -1212,6 +1212,25 @@ paths:
                 type: array
                 items: { $ref: "#/components/schemas/TopScorerOut" }
 
+  /api/v1/players/{name}/career:
+    get:
+      tags: [Players]
+      summary: Historial de rendimiento de un jugador dentro del Mundial (partido)
+      operationId: players_career
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+          description: "Nombre exacto del jugador (case-insensitive)"
+      responses:
+        "200":
+          description: Estadística (Stats) de rendimiento en todos los Mundiales 
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlayerCareerOut" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
     # ══════════════════════════════════════════════════════════════ #
     # ANALYTICS — JSON para D3.js / dashboards
     # ══════════════════════════════════════════════════════════════ #
