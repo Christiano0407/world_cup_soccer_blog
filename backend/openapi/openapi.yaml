@@ -1294,6 +1294,54 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+    patch: 
+      tags: [Admin]
+      summary: Modificar (Actualizar) el role del Usuario o estado del mismo
+      operationId: admin_users_update
+      security: 
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/jason:
+            schema:
+              { $ref: "#/components/schemas/AdminUserUpdate" }
+      responses: 
+        "200":
+          description: Usuario Actualizado (Update)
+          content:
+            application/json: 
+              schema:
+                { $ref: "#/components/schemas/AdminUserOut" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      
+    delete: 
+      tags: [Admin]
+      summary: soft delete (Quita lo 'Active') del Usuario
+      description: Establece 'is_active=false'. No elimina datos de auditoría
+      operationId: admin_users_delete
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path 
+          required: true
+          schema: { type: string, format: uuid }
+      responses: 
+        "204": { description: Usuario Desconectado }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ====== TAGS — orden y descripción en Swagger UI ======
 # ─────────────────────────────────────────────────────────────────────────────
