@@ -1270,6 +1270,30 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/v1/admin/users/{user_id}: 
+    get:
+      tags: [Admin]
+      summary: Detalles del Usuario
+      operationId: admin_users_get
+      security: 
+      - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            { type: string, format: uuid }
+      responses: 
+        "200":
+          description: Datos del Usuario (Roles/Acceso/Permisos)
+          content: 
+            application/json: 
+              schema:
+                { $ref: "#/components/schemas/AdminUserOut" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ====== TAGS — orden y descripción en Swagger UI ======
 # ─────────────────────────────────────────────────────────────────────────────
