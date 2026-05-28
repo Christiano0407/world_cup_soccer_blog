@@ -1242,3 +1242,20 @@ paths:
 # ─────────────────────────────────────────────────────────────────────────────
 # ====== TAGS — orden y descripción en Swagger UI ======
 # ─────────────────────────────────────────────────────────────────────────────
+tags:
+  - name: System
+    description: "Health checks — para load balancer, Docker y monitoreo"
+  - name: Authentication
+    description: "JWT auth — register, login, refresh, logout, perfil"
+  - name: Teams
+    description: "Selecciones nacionales — stats históricos, rankings, head-to-head"
+  - name: Tournaments
+    description: "Ediciones del Mundial — 1930 a 2022"
+  - name: Matches
+    description: "Partidos individuales — búsqueda, filtros, plantillas"
+  - name: Players
+    description: "Jugadores — apariciones, goleadores, historial de carrera"
+  - name: Analytics
+    description: "Datos pre-agregados para dashboards D3.js (A1–A8) | Workers"
+  - name: Admin
+    description: "Administración — usuarios, ETL, warehouse, audit (role: admin)"
