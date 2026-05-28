@@ -1131,13 +1131,59 @@ paths:
             application/json: 
               schema:
                 type: array
-                items: { $ref: "#/components/schemas//PlayerAppearanceOut" }
+                items: { $ref: "#/components/schemas/PlayerAppearanceOut" }
         "404": 
           { $ref: "#/components/responses/NotFound" }
           
     # ══════════════════════════════════════════════════════════════ #
     # PLAYERS
     # ══════════════════════════════════════════════════════════════ #
+  /api/v1/players:
+    get: 
+      tags: [Players]
+      summary: Listar (orden) apariciones de jugadores (dentro del Mundial/Torneo). Agregamos filtros
+      operationId: players_list
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+        - name: team 
+          in: query 
+          schema:
+            { type: string, minLength: 3 }
+      responses:
+        "200": 
+          description: Apariciones dentro del Torneo/Mundial & por Páginas
+          content:
+            application/jason: 
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/component/schemas/PlayerAppearanceOut" }
+
+  /api/v1/players/search:
+    get:
+      tags: [Players]
+      summary: Búsqueda (search) de jugadores por nombre 
+      description: Usar 'pg_trgm' (postgres) para búsquedas parcial tolerante a acentos 
+      operationId: players_search
+      parameters:
+        - name: q 
+          in: query
+          required: true
+          schema:
+            { type: integer, default: 10, maximum: 50 }
+      responses: 
+        "200":
+          description: Búsqueda (search) jugadores encontrados
+          content:
+            application/jason:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PlayerAppearanceOut" }
 
     # ══════════════════════════════════════════════════════════════ #
     # ANALYTICS — JSON para D3.js / dashboards
