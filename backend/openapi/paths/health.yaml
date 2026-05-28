@@ -1,0 +1,44 @@
+# ══════════════════════════════════════════════════════════════ #
+# SYSTEM — Health (Bien en ejecución) checks
+# ══════════════════════════════════════════════════════════════ # 
+/api/health:
+  get:
+    tags: [System]
+    summary: Health Check Basic (Execute good | Status OK)
+    description: Siempre retorna 'Status 200 ok'. Usado por Docker / NGINX / Load Balancer
+    operationId: health_check
+    responses: 
+      "200":
+        description: Servicio Activo (Service Active)
+        content:
+          application/json:
+            schema:
+              { $ref: "../components/schemas/shared.yaml#/HealthOut"}
+            example: { status: ok, version: "0.1.0", environment: development }
+
+/api/health/db:
+  get:
+    tags: [System]
+    summary: Conectividad a PostgresSQL
+    operationId: health_db
+    responses: 
+      "200":
+        description: Estado de conexión a DB
+        content:
+          application/json:
+            schema:
+              { $ref: "../components/schemas/shared.yaml#/ComponentHealthOut" }
+            example: { component: db, status: ok, latency_ms: 2.4 }
+
+/api/health/storage:
+  get:
+    tags: [System]
+    summary: Conectividad a MiniO - Storage s3
+    operationId: health_storage
+    responses:
+      "200":
+        description: Estado de conexión con MiniO - OK
+        content: 
+          application/json:
+            schema:
+              { $ref: "../components/schemas/shared.yaml#/ComponentHealthOut" }

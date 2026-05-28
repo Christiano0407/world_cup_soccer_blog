@@ -1,0 +1,52 @@
+# ----------------------------------------------------------------------------------------------------------------- #
+#  === Schemes [Datos / "components"] ===
+# ----------------------------------------------------------------------------------------------------------------- #
+
+# = Shared = 
+Error:
+  type: object
+  required: [detail]
+  properties:
+    detail:
+      type: string
+      example: "Recurso no encontrado |Data not search"
+
+ValidationError:
+  type: object
+  required: [detail]
+  properties:
+    detail:
+      type: array
+      items:
+        type: object
+        properties:
+          loc: {type: array, items: {type: string}}
+          msg: {type: string}
+          type: {type: string}
+
+# === Good Endpoint & Response / Request ===
+HealthOut:
+  type: object
+  required: [status, version, environment]
+  properties:
+    status: {type: string, enum: [ok, degraded, down]}
+    version: { type: string, example: "0.1.0"}
+    environment: { type: string, example: "development"}
+
+ComponentHealthOut:
+  type: object
+  required: [component, status, latency_ms, detail]
+  properties:
+    component: {type: string, example: "db"}
+    status: { type: string, enum: [ok, down]}
+    latency_ms: {type: number, nullable: true, example: 2.4}
+    detail: {type: string, nullable: true}
+
+Paginated:
+  type: object
+  required: [items, total, page, page_size, pages]
+  properties:
+    total: {type: integer, example: 22 }
+    page: { type: integer, example: 1 }
+    page_size: {type: integer, example: 20}
+    pages: { type: integer, example: 2}

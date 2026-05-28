@@ -1,0 +1,229 @@
+# ══════════════════════════════════════════════════════════════ #
+# ADMIN — role: admin required [admin, editor, reader]
+# ══════════════════════════════════════════════════════════════ #
+/api/v1/admin/users:
+  get:
+    tags: [Admin]
+    summary: Listar (Ordenar) los usuario que tienen acceso & permisos (role)
+    operationId: admin_user_list
+    security: 
+      - BearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/PageParam"
+      - $ref: "../openapi.yaml#/components/parameters/PageSizeParam"
+      - name: role
+        in: query
+        schema: { type: string, enum: [admin, editor, reader] }
+      - name: is_active
+        in: query
+        schema: { type: boolean }
+    responses: 
+      "200": 
+        description: Usuarios Paginados (ordenados por Páginas & Roles)
+        content: 
+          application/json: 
+            schema:
+              allOf:
+                - $ref: "../components/schemas/shared.yaml#/Paginated"
+                - type: object
+                  properties: 
+                    items: 
+                      type: array
+                      items: { $ref: "../components/schemas/admin.yaml#/AdminUserOut" }
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+
+/api/v1/admin/users/{user_id}: 
+  get:
+    tags: [Admin]
+    summary: Detalles del Usuario
+    operationId: admin_users_get
+    security: 
+      - BearerAuth: []
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          { type: string, format: uuid }
+    responses: 
+      "200":
+        description: Datos del Usuario (Roles/Acceso/Permisos)
+        content: 
+          application/json: 
+            schema:
+              { $ref: "../components/schemas/admin.yaml#/AdminUserOut" }
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }
+
+  patch: 
+    tags: [Admin]
+    summary: Modificar (Actualizar) el role del Usuario o estado del mismo
+    operationId: admin_users_update
+    security: 
+      - BearerAuth: []
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          { type: string, format: uuid }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            { $ref: "../components/schemas/admin.yaml#/AdminUserUpdate" }
+    responses: 
+      "200":
+        description: Usuario Actualizado (Update)
+        content:
+          application/json: 
+            schema:
+              { $ref: "../components/schemas/admin.yaml#/AdminUserOut" }
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }
+      
+  delete: 
+    tags: [Admin]
+    summary: soft delete (Quita lo 'Active') del Usuario
+    description: Establece 'is_active=false'. No elimina datos de auditoría
+    operationId: admin_users_delete
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: user_id
+        in: path 
+        required: true
+        schema: { type: string, format: uuid }
+    responses: 
+      "204": { description: Usuario Desconectado }
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }
+
+/api/v1/admin/etl/trigger:
+  post:
+    tags: [Admin]
+    summary: Disparar (Funciones | Ejecutan) Pipeline ETL 
+    description: |
+      Encola (acomodar / async) la ejecución del pipeline ETL para el dataset especificado.
+      En producción se despacha de forma asíncrona (Celery / ARQ).
+    operationId: admin_etl_trigger
+    security: 
+      - BearerAuth: []
+    requestBody: 
+      required: true
+      content: 
+        application/json: 
+          schema: { $ref: "../components/schemas/admin.yaml#/EtlTriggerIn" }
+    responses: 
+      "200":
+        description: Pipeline (orden de ejecución) | Cola de Tareas
+        content: 
+          application/json: 
+            schema:
+              type: object
+              properties:
+                status: { type: string, example: "queued" }
+                dataset: { type: string, example: "all" }
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+
+/api/v1/admin/etl/dead-letter:
+  get: 
+    tags: [Admin]
+    summary: Filas Rechazadas por el Pipeline (dead letter)
+    operationId: admin_etl_dead_letter
+    security: 
+      - BearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/PageParam"
+      - $ref: "../openapi.yaml#/components/parameters/PageSizeParam"
+      - name: dataset
+        in: query
+        schema:
+          { type: string, enum: [winners, matches, players] }
+      - name: error_code
+        in: query
+        schema:
+          { type: string }
+        description: "Filtrar por código de error: MISSING_YEAR, INVALID_DATETIME, etc."
+    responses: 
+      "200":
+        description: Filas rechazadas paginadas (Ordenadas)
+        content: 
+          application/json: 
+            schema:
+              allOf: 
+                - $ref: "../components/schemas/shared.yaml#/Paginated"
+                - type: object
+                  properties: 
+                    items: 
+                      type: array
+                      items: {$ref: "../components/schemas/admin.yaml#/DeadLetterOut"}
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+
+/api/v1/admin/warehouse/refresh:
+  post: 
+    tags: [Admin]
+    summary: Forzar refresh de visitas materializadas
+    description: Llama a 'warehouse.refresh_all()' en PostgreSQL
+    operationId: admin_warehouse_refresh 
+    security: 
+      - BearerAuth: []
+    responses: 
+      "200":
+        description: Refresh completado
+        content: 
+          application/json: 
+            schema:
+              type: object
+              properties:
+                status: { type: string, example: "ok" }
+                message: { type: string, example: "All warehouse views refreshed" }
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }  
+
+/api/v1/admin/audit-log:
+  get:
+    tags: [Admin]
+    summary: Log (History) de cambios en tablas de producción
+    operationId: admin_audit_log
+    security:
+      - BearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/PageParam"
+      - $ref: "../openapi.yaml#/components/parameters/PageSizeParam"
+      - name: table_name
+        in: query
+        schema: { type: string }
+        description: "Filtrar por tabla: tournaments, matches, users, etc."
+      - name: operation
+        in: query
+        schema: { type: string, enum: [I, U, D] }
+        description: "I=insert, U=update, D=delete"
+    responses:
+      "200":
+        description: Entradas del audit log (History) paginadas (Orden de ejecución)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      log_id:      { type: integer }
+                      schema_name: { type: string }
+                      table_name:  { type: string }
+                      operation:   { type: string, enum: [I, U, D] }
+                      changed_by:  { type: string }
+                      changed_at:  { type: string, format: date-time }
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }       

@@ -1,0 +1,35 @@
+# === Matches (Tipado) === #
+MatchOut:
+  type: object
+  required: [match_id, tournament_id, year, stage, match_datetime, home_team_initials, away_team_initials, home_goals, away_goals]
+  properties:
+    match_id:           { type: integer, example: 1 }
+    tournament_id:      { type: integer, example: 1 }
+    year:               { type: integer, example: 1930 }
+    stage:              { type: string, example: "Group 1" }
+    match_datetime:     { type: string, format: date-time, example: "1930-07-13T15:00:00Z" }
+    stadium:            { type: string, nullable: true, example: "Pocitos" }
+    city:               { type: string, nullable: true, example: "Montevideo" }
+    home_team_initials: { type: string, example: "FRA" }
+    away_team_initials: { type: string, example: "MEX" }
+    home_team_name:     { type: string, nullable: true, example: "France" }
+    away_team_name:     { type: string, nullable: true, example: "Mexico" }
+    home_goals:         { type: integer, example: 4 }
+    away_goals:         { type: integer, example: 1 }
+    ht_home_goals:      { type: integer, nullable: true, example: 3 }
+    ht_away_goals:      { type: integer, nullable: true, example: 0 }
+    win_conditions:     { type: string, nullable: true, example: null }
+    attendance:         { type: integer, nullable: true, example: 4444 }
+    referee:            { type: string, nullable: true, example: "LOMBARDI Domingo (URU)" }
+
+MatchListOut:
+  type: object
+  properties:
+    match_id:           { type: integer }
+    year:               { type: integer }
+    stage:              { type: string }
+    match_datetime:     { type: string, format: date-time }
+    home_team_initials: { type: string }
+    away_team_initials: { type: string }
+    home_goals:         { type: integer }
+    away_goals:         { type: integer }

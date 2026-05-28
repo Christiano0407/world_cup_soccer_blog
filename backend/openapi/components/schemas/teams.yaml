@@ -1,0 +1,45 @@
+# === Teams (Tipado) === #
+TeamOut: 
+  type: object
+  required: [ team_id, initials, name, active ]
+  properties:
+    team_id:        { type: integer, example: 1 }
+    initials:       { type: string, example: "BRA" }
+    name:           { type: string, example: "Brazil" }
+    confederation:  { type: string, nullable: true, example: "CONMEBOL"}
+    fifa_code:      { type: string, nullable: true, example: "BRA" }
+    active:         { type: boolean, example: true }
+
+TeamStatsOut: 
+  type: object
+  properties:
+    initials:       { type: string, example: "BRA" }
+    name:           { type: string, example: "Brazil" }
+    confederation:  { type: string, nullable: true}
+    tournaments_played: { type: integer, example: 22 }
+    titles:         { type: integer, example: 5 }
+    runner_ups:     { type: integer, example: 2 }
+    total_matches:  { type: integer, example: 114 }
+    wins:           { type: integer, example: 76 }
+    draws:          { type: integer, example: 18 }
+    losses:         { type: integer, example: 3 }
+    goals_scored:   { type: integer, example: 237 }
+    goals_conceded: { type: integer, example: 101 }
+    goals_difference: { type: integer, example: 136 }
+    win_rate_pct:   { type: number, example: 66.67 }
+
+TeamIn:
+  type: object
+  required: [initials, name]
+  properties:
+    initials:       { type: string, minLength: 2, maxLength: 3, example: "POR" }
+    name:           { type: string, maxLength: 100, example: "Portugal"}
+    confederation:  { type: string, nullable: true, example: "CONMEBOL" }
+    active:         { type: boolean, default: true }
+
+TeamUpdate:
+  type: object
+  properties:
+    name:           { type: string, maxLength: 100, nullable: true }
+    confederation:  { type: string, nullable: true }
+    active:         { type: boolean, nullable: true }

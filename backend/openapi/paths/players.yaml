@@ -1,0 +1,99 @@
+# ══════════════════════════════════════════════════════════════ #
+# PLAYERS
+# ══════════════════════════════════════════════════════════════ #
+/api/v1/players:
+  get: 
+    tags: [Players]
+    summary: Listar (orden) apariciones de jugadores (dentro del Mundial/Torneo). Agregamos filtros
+    operationId: players_list
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/PageParam"
+      - $ref: "../openapi.yaml#/components/parameters/PageSizeParam"
+      - name: team 
+        in: query 
+        schema:
+          { type: string, minLength: 3 }
+    responses:
+      "200": 
+        description: Apariciones dentro del Torneo/Mundial & por Páginas
+        content:
+          application/json: 
+            schema:
+              allOf:
+                - $ref: "../components/schemas/shared.yaml#/Paginated"
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: "../components/schemas/players.yaml#/PlayerAppearOut" }
+
+/api/v1/players/search:
+  get:
+    tags: [Players]
+    summary: Búsqueda (search) de jugadores por nombre 
+    description: Usar 'pg_trgm' (postgres) para búsquedas parcial tolerante a acentos 
+    operationId: players_search
+    parameters:
+      - name: q 
+        in: query
+        required: true
+        schema:
+          { type: string }
+      - name: limit
+        in: query
+        schema:
+          { type: integer, default: 10, maximum: 50 }
+    responses: 
+      "200":
+        description: Búsqueda (search) jugadores encontrados
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "../components/schemas/players.yaml#/PlayerAppearOut" }
+
+/api/v1/players/top-scorers:
+  get: 
+    tags: [Players]
+    summary: Goleadores Históricos del Mundial/Torneo en la Historia
+    operationId: players_top_scorers
+    parameters:
+      - name: top
+        in: query
+        schema:
+          { type: integer, default: 10, minimum: 1, maximum: 50 }
+      - name: team
+        in: query
+        schema:
+          { type: string, maxLength: 3 }
+      - name: position
+        in: query
+        schema:
+          { type: string, enum: [GK, DF, MF, FW] }
+    responses: 
+      "200": 
+        description: Top (máximos) goleadores de todos los Mundiales (Torneo)
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "../components/schemas/players.yaml#/TopScorerOut" }
+
+/api/v1/players/{name}/career:
+  get:
+    tags: [Players]
+    summary: Historial de rendimiento de un jugador dentro del Mundial (partido)
+    operationId: players_career
+    parameters:
+      - name: name
+        in: path
+        required: true
+        schema: { type: string }
+        description: "Nombre exacto del jugador (case-insensitive)"
+    responses:
+      "200":
+        description: Estadística (Stats) de rendimiento en todos los Mundiales 
+        content:
+          application/json:
+            schema: { $ref: "../components/schemas/players.yaml#/PlayerCareerOut" }
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }

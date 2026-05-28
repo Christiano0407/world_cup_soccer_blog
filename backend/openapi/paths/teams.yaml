@@ -1,0 +1,178 @@
+# ══════════════════════════════════════════════════════════════ #
+# TEAMS
+# ══════════════════════════════════════════════════════════════ #
+/api/v1/teams:
+  get:
+    tags: [Teams]
+    summary: Listar (orden) todas las Selecciones de Fútbol
+    operationId: teams_list
+    parameters:
+      - name: active
+        in: query
+        schema: { type: boolean }
+        description: Filtrar por Selecciones (equipos) Activos/disueltos (eliminados) 
+      - name: confederation
+        in: query
+        schema: { type: string }
+        description: "UEFA | CONMEBOL | CAF | AFC | CONCACAF | OFC"
+    responses: 
+      "200":
+        description: Lista de Selecciones (Equipos)
+        content: 
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "../components/schemas/teams.yaml#/TeamOut" }
+
+  post: 
+    tags: [Teams]
+    summary: Crear selección/equipo (admin)
+    operationId: teams_create
+    security: 
+      - BearerAuth: []
+    requestBody: 
+      required: true
+      content: 
+        application/json:
+          schema:
+            { $ref: "../components/schemas/teams.yaml#/TeamIn" }
+    responses: 
+      "201":
+        description: Equipo/Selección creado
+        content: 
+          application/json:
+            schema:
+              { $ref: "../components/schemas/teams.yaml#/TeamOut" }
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+      "409": { $ref: "../openapi.yaml#/components/responses/Conflict" }
+
+/api/v1/teams/ranking:
+  get:
+    tags: [Teams]
+    summary: Ranking Histórico de Selecciones de Fútbol en el Mundial
+    operationId: teams_ranking
+    parameters:
+      - name: sort_by
+        in: query
+        schema:
+          type: string
+          enum: [titles, wins, goals_scored, total_matches]
+          default: titles
+      - name: min_matches
+        in: query
+        schema: 
+          { type: integer, default: 3 }
+        description: Mínimo de Partidos jugados para aparecer
+    responses: 
+      "200":
+        description: Ranking de la Selección/Equipo con stats (Estadísticas) históricas
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "../components/schemas/teams.yaml#/TeamStatsOut" }
+
+/api/v1/teams/{initials}:
+  get: 
+    tags: [Teams]
+    summary: Detalles (Details) & Estadísticas (stats) de una Selección/Equipo
+    operationId: teams_get
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/InitialsParam"
+    responses:
+      "200":
+        description: Estadísticas (Stats) históricas de la Selección / Equipo
+        content: 
+          application/json: 
+            schema:
+              { $ref: "../components/schemas/teams.yaml#/TeamStatsOut" }
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound"}
+  
+  patch:
+    tags: [Teams]
+    summary: Actualizar selección/equipo (admin) 
+    operationId: teams_update
+    security: 
+      - BearerAuth: []
+    parameters: 
+      - $ref: "../openapi.yaml#/components/parameters/InitialsParam"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            { $ref: "../components/schemas/teams.yaml#/TeamUpdate" }
+    responses:
+      "200":
+        description: Selección/Equipo Actualizado (Información)
+        content: 
+          application/json: 
+            schema:
+              { $ref: "../components/schemas/teams.yaml#/TeamOut" }
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }
+
+/api/v1/teams/{initials}/matches:
+  get:
+    tags: [Teams]
+    summary: Historial de partidos de una Selección/Equipos en un Mundial
+    operationId: team_matches
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/InitialsParam"
+      - $ref: "../openapi.yaml#/components/parameters/PageParam"
+      - $ref: "../openapi.yaml#/components/parameters/PageSizeParam"
+      - name: year 
+        in: query
+        schema:
+          { type: integer }
+      - name: stage
+        in: query
+        schema:
+          { type: string }
+    responses:
+      "200":
+        description: Partidos Paginados (por página) de cada selección/equipo
+        content: 
+          application/json:
+            schema:
+              allOf:
+                - $ref: "../components/schemas/shared.yaml#/Paginated"
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: "../components/schemas/matches.yaml#/MatchListOut" }
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound"}
+
+/api/v1/teams/{initials}/vs/{opponent}:
+  get:
+    tags: [Teams]
+    summary: Head-to-Head (Cara a cara) entre dos Selecciones
+    operationId: teams_head_to_head
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/InitialsParam"
+      - name: opponent
+        in: path
+        required: true
+        schema:
+          { type: string, minLength: 2, maxLength: 3 }
+    responses:
+      "200":
+        description: Historial directo entre las dos selecciones/equipos
+        content: 
+          application/json:
+            schema:
+              type: object
+              properties:
+                  team_a:           { type: string }
+                  team_b:           { type: string }
+                  total_matches:    { type: integer }
+                  team_a_wins:      { type: integer }
+                  team_b_wins:      { type: integer }
+                  draws:            { type: integer }
+                  team_a_goals:     { type: integer }
+                  team_b_goals:     { type: integer }
+                  first_encounter:  { type: integer }
+                  last_encounter:   { type: integer }

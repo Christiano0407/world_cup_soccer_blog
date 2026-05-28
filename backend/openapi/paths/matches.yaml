@@ -1,0 +1,98 @@
+# ══════════════════════════════════════════════════════════════ #
+# MATCHES
+# ══════════════════════════════════════════════════════════════ #
+/api/v1/matches:
+  get: 
+    tags: [Matches]
+    summary: Listar partidos con filtros (Orden los partidos del Torneo/Mundial)
+    operationId: matches_list
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/PageParam"
+      - $ref: "../openapi.yaml#/components/parameters/PageSizeParam"
+      - name: year
+        in: query
+        schema:
+          { type: integer }
+      - name: stage
+        in: query
+        schema:
+          { type: string }
+      - name: team 
+        in: query
+        schema:
+          { type: string, maxLength: 3 }
+        description: "Iniciales del Equipo/Selección (Iniciales) - Local & Visitante"
+      - name: min_goals
+        in: query
+        schema:
+          { type: integer, minimum: 0 }
+        description: "Mínimo de Total de Goles en un Partido del Mundial"
+    responses:
+      "200":
+        description: Partidos Paginados (Lista | Filtros)
+        content: 
+          application/json:
+            schema:
+              allOf:
+                - $ref: "../components/schemas/shared.yaml#/Paginated"
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items: { $ref: "../components/schemas/matches.yaml#/MatchListOut" }
+
+/api/v1/matches/search:
+  get:
+    tags: [Matches]
+    summary: Búsqueda por texto libre (Buscar su País/Selección)
+    description: Buscar una Selección, Estadio, Ciudad o árbitro
+    operationId: matches_search
+    parameters:
+      - name: q
+        in: query
+        required: true
+        schema: { type: string, minLength: 2 }
+      - name: limit
+        in: query
+        schema: { type: integer, default: 10, maximum: 50}
+    responses: 
+      "200":
+        description: Resultado de Búsqueda (Search Result)
+        content: 
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "../components/schemas/matches.yaml#/MatchListOut"}
+
+/api/v1/matches/{match_id}:
+  get: 
+    tags: [Matches]
+    summary: Identificador único a detalle de un partido | Detalles Completos
+    operationId: matches_get
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/MatchIdParam"
+    responses: 
+      "200":
+        description: Datos a detalle & Completos del partido
+        content: 
+          application/json: 
+            schema: { $ref: "../components/schemas/matches.yaml#/MatchOut" }
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }
+
+/api/v1/matches/{match_id}/player:
+  get: 
+    tags: [Matches]
+    summary: Plantillas (Jugadores) de ambas selecciones/equipos en un partido
+    operationId: matches_players
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/MatchIdParam"
+    responses: 
+      "200":
+        description: Plantilla (Jugadores) - Titulares, Suplentes y Eventos de ambas Selecciones
+        content:
+          application/json: 
+            schema:
+              type: array
+              items: { $ref: "../components/schemas/players.yaml#/PlayerAppearOut" }
+      "404": 
+        { $ref: "../openapi.yaml#/components/responses/NotFound" }

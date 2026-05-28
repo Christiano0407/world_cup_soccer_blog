@@ -1,0 +1,176 @@
+# ══════════════════════════════════════════════════════════════ #
+# TOURNAMENTS
+# ══════════════════════════════════════════════════════════════ #
+/api/v1/tournaments:
+  get:
+    tags: [Tournaments]
+    summary: Listar todas las ediciones del Mundial (Torneo)
+    operationId: tournament_list
+    parameters: 
+      - $ref: "../openapi.yaml#/components/parameters/PageParam"
+      - $ref: "../openapi.yaml#/components/parameters/PageSizeParam"
+      - name: year_from
+        in: query
+        schema: { type: integer, minimum: 1930 }
+      - name: year_to
+        in: query
+        schema: { type: integer, maximum: 2030 }
+    responses: 
+      "200":
+        description: Ediciones (Mundial en orden), paginadas
+        content: 
+          application/json:
+            schema:
+              allOf:
+                - $ref: "../components/schemas/shared.yaml#/Paginated"
+                - type: object
+                  properties:
+                    items: 
+                      type: array
+                      items: { $ref: "../components/schemas/tournaments.yaml#/TournamentListOut" } 
+
+  post:
+    tags: [Tournaments]
+    summary: Crear Ediciones (Torneo) - (admin)
+    operationId: tournaments_create
+    security:
+      - BearerAuth: []
+    requestBody: 
+      required: true
+      content:
+        application/json:
+          schema:
+            { $ref: "../components/schemas/tournaments.yaml#/TournamentIn"}
+    responses:
+      "201": 
+        description: Edición (Torneo) Creado
+        content:
+          application/json:
+            schema: { $ref: "../components/schemas/tournaments.yaml#/TournamentOut" }
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+      "409": { $ref: "../openapi.yaml#/components/responses/Conflict" }
+
+/api/v1/tournaments/{year}: 
+  get: 
+    tags: [Tournaments]
+    summary: Mundiales (torneo), detallado por año
+    operationId: tournaments_get
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/YearParam"
+    responses:
+      "200":
+        description: Edición (torneo por año) con estadísticas (stats) completas
+        content: 
+          application/json:
+            schema:
+              { $ref: "../components/schemas/tournaments.yaml#/TournamentOut"}
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }
+
+  patch:
+    tags: [Tournaments]
+    summary: Actualizar edición - Mundial por año (admin)
+    operationId: tournaments_update
+    security: 
+      - BearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/YearParam"
+    requestBody:
+      required: true
+      content: 
+        application/json: 
+          schema:
+            { $ref: "../components/schemas/tournaments.yaml#/TournamentUpdate" }
+    responses: 
+      "200":
+        description: edición (Torneo Mundial) actualizado
+        content: 
+          application/json:
+            schema:
+              { $ref: "../components/schemas/tournaments.yaml#/TournamentOut"}
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }
+
+  delete: 
+    tags: [Tournaments]
+    summary: Eliminar edición mundialista (Torneo) 
+    description: |
+      **ADVERTENCIA**: Solo eliminar si no tiene matches asociados.
+      Los datos históricos no deben eliminarse — usar con precaución.
+    operationId: tournaments_delete
+    security: 
+      - BearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/YearParam"
+    responses: 
+      "204": {description: "Edition Delete (Torneo Eliminado)"}
+      "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized"}
+      "403": { $ref: "../openapi.yaml#/components/responses/Forbidden"}
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound"}
+
+/api/v1/tournaments/{year}/matches:
+  get: 
+    tags: [Tournaments]
+    summary: Partidos jugados por edición (Torneo) | Por año
+    operationId: tournaments_matches
+    parameters: 
+      - $ref: "../openapi.yaml#/components/parameters/YearParam"
+      - $ref: "../openapi.yaml#/components/parameters/PageParam"
+      - $ref: "../openapi.yaml#/components/parameters/PageSizeParam"
+      - name: stage
+        in: query
+        schema:
+          { type: string }
+        description: "filtrar por fase (Etapas del torneo): Group 1, Final, etc."
+    responses: 
+      "200":
+        description: Partidos paginados (orden) de la edición (Por torneo)
+        content: 
+          application/json:
+            schema:
+              allOf:
+                - $ref: "../components/schemas/shared.yaml#/Paginated"
+                - type: object
+                  properties: 
+                    items: 
+                      type: array
+                      items: { $ref: "../components/schemas/matches.yaml#/MatchListOut"}
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }
+
+/api/v1/tournaments/{year}/top-scorers:
+  get: 
+    tags: [Tournaments]
+    summary: Top goleadores de una edición (Torneo | Mundial)
+    operationId: tournaments_top_scorers
+    parameters: 
+      - $ref: "../openapi.yaml#/components/parameters/YearParam"
+      - name: top
+        in: query
+        schema: { type: integer, default: 10, minimum:1, maximum: 50 }
+    responses: 
+      "200": 
+        description: Top goleadores de la edición (Torneo | Mundial)
+        content: 
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "../components/schemas/players.yaml#/TopScorerOut" }
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }
+
+/api/v1/tournaments/{year}/teams: 
+  get: 
+    tags: [Tournaments]
+    summary: Equipos/Selecciones participantes por edición (Torneo/Mundial)
+    operationId: tournaments_teams
+    parameters: 
+      - $ref: "../openapi.yaml#/components/parameters/YearParam"
+    responses: 
+      "200":
+        description: Equipos/Selecciones que participaron en esa edición (Torneo/Mundial)
+        content: 
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "../components/schemas/teams.yaml#/TeamOut"}
+      "404": { $ref: "../openapi.yaml#/components/responses/NotFound"}        

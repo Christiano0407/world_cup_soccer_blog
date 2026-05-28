@@ -1,0 +1,38 @@
+# === Players (Tipado) === #
+PlayerAppearOut:
+  type: object
+  properties:
+    player_match_id:          { type: integer }
+    match_id:                 { type: integer }
+    team_initials:            { type: string, example: "FRA" }
+    coach_name:               { type: string, nullable: true, example: "CAUDRON Raoul (FRA)" }
+    lineup_type:              { type: string, enum: [S, N], description: "S=Titular & N=Suplente"}
+    shirt_number:             { type: integer, nullable: true }
+    player_name:              { type: string, example: "Alex Thepot" }
+    position:                 { type: ['string', 'null'], enum: [GK, DF, MF, FW] }
+    event_code:               { type: string, nullable: true, example: "G", description: "G=gol, Y=Yellow Card, R=Red Card, OG=Propia"  }
+
+PlayerCareerOut: 
+  type: object
+  properties:
+    player_name:        { type: string }
+    team_initials:      { type: string } 
+    total_appearances:  { type: integer }
+    starts:             { type: integer }
+    substitution:       { type: integer }
+    goals:              { type: integer }
+    yellow_cards:       { type: integer }
+    red_cards:          { type: integer }
+    editions:           { type: array, items: { type: integer } }
+
+TopScorerOut: 
+  type: object
+  properties:
+    player_name:    { type: string, example: "Miroslav KLOSE" }
+    team_initials:  { type: string, example: "GER" }
+    goals:          { type: integer, example: 16 }
+    own_goals:      { type: integer, example: 0 }
+    matches_played: { type: integer, example: 24 }
+    first_wc:       { type: integer, example: 2002 }
+    last_wc:        { type: integer, example: 2014 }
+    editions:       { type: integer, example: 4 }

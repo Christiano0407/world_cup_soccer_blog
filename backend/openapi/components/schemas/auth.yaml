@@ -1,0 +1,65 @@
+# === Auth === #
+RegisterIn:
+  type: object
+  required: [fullname, email, password]
+  properties:
+    fullname: 
+      type: string
+      minLength: 4
+      maxLength: 50
+      example: "Luisa Natalia Cantú Ramírez"
+      description: "Mínimo de caracteres para el Nombre del Usuario es: 4"
+    email: 
+      type: string
+      format: email
+      example: "luigi@example.com"
+    password: 
+      type: string
+      minLength: 8
+      maxLength: 120
+      example: "LuigiLove0407Fan"
+      description: "Mínimo de 8 caracteres & al menos 1 Dígito"
+    display_name: 
+      type: string
+      maxLength: 80
+      nullable: true
+      example: "FIFA Fan"
+
+LoginIn:
+  type: object
+  required: [email, password]
+  properties:
+    email: {type: string, format: email, example: "LuigiLove0407Fan"}
+    password: {type: string, example: "luigiFanFest0407"}
+
+TokenOut: 
+  type: object
+  required: [access_token, token_type, expire_in]
+  properties:
+    access_token: { type: string, example: "eyJhbGciOiJIUzI1NiIs..." }
+    token_type: { type: string, example: "bearer" }
+    expire_in: { type: integer, example: 1800, description: "Segundos(Seconds)" }
+
+UserOut: 
+  type: object
+  required: [user_id, email, role, is_active, created_at, updated_at]
+  properties: 
+    user_id: {type: string, format: uuid}
+    email: {type: string, format: email}
+    display_name: {type: string, nullable: true}
+    role: {type: string, enum: [admin, editor, reader]}
+    is_active: {type: boolean}
+    created_at: {type: string, format: date-time}
+    updated_at: {type: string, format: date-time}
+
+UserUpdateIn:
+  type: object
+  properties:
+    display_name: { type: string, maxLength: 80, nullable: true } 
+
+ChangePasswordIn:
+  type: object
+  required: [ current_password, new_password ]
+  properties:
+    current_password: { type: string }
+    new_password: { type: string, minLength: 8, maxLength: 128 }

@@ -1,6 +1,5 @@
 openapi: "3.1.0"
 
-
 info:
   title: FIFA World Cup Platform API
   version: "0.1.0"
@@ -9,7 +8,7 @@ info:
     
       API REST para la plataforma de Datos históricos del Mundial de Fútbol FIFA. 
 
-    ### Autenticación (AUTH / Authetintication) 
+    ### Autenticación (AUTH / Authentication) 
       La Mayoría de los "Endpoints", son **públicos++ (Lectura de datos históricos).
       Los "Endpoints" protegidos usan **JWT Bearer Token**.
 
@@ -30,21 +29,19 @@ info:
     Todos los endpoints de producción están bajo `/api/v1/`.
     Swagger UI disponible solo en entornos `development` y `staging`.
 
-  
+   
   contact:
     name: Chris Velázquez | Platform Team
   license: 
     name: MIT
 
-  
 servers:
   - url: http://localhost:8000
     description: Development
   - url: https://fifaplatform.dev
     description: Staging
   - url: https://fifaplatform.com
-    description: Production/Deploy
-
+    description: Production
 
 # ----------------------------------------------------------------------------------------------------------------- #
 #  === Security Scheme ===
@@ -68,352 +65,80 @@ components:
 # ----------------------------------------------------------------------------------------------------------------- #
 
   schemas:
-
     # = Shared = 
     Error:
-      type: object
-      required: [detail]
-      properties:
-        detail:
-          type: string
-          example: "Recurso no encontrado |Data not search"
-
+      $ref: './components/schemas/shared.yaml#/Error'
     ValidationError:
-      type: object
-      required: [detail]
-      properties:
-        detail:
-          type: array
-          items:
-            type: object
-            properties:
-              loc: {type: array, items: {type: string}}
-              msg: {type: string}
-              type: {type: string}
-
-    # === Good Endpoint & Response / Request ===
+      $ref: './components/schemas/shared.yaml#/ValidationError'
     HealthOut:
-      type: object
-      required: [status, version, environment]
-      properties:
-        status: {type: string, enum: [ok, degraded, down]}
-        version: { type: string, example: "0.1.0"}
-        environment: { type: string, example: "development"}
-
+      $ref: './components/schemas/shared.yaml#/HealthOut'
     ComponentHealthOut:
-      type: object
-      required: [component, status, latency_me, detaiL]
-      properties:
-        component: {type: string, example: "db"}
-        status: { type: string, enum: [ok, down]}
-        latency_me: {type: number, nullable: true, example: 2.4}
-        detaiL: {type: string, nullable: true}
-
+      $ref: './components/schemas/shared.yaml#/ComponentHealthOut'
     Paginated:
-      type: object
-      required: [items, total, page, page_size, pages]
-      properties:
-        total: {type: integer, example: 22 }
-        page: { type: integer, example: 1 }
-        page_size: {type: integer, example: 20}
-        pages: { type: integer, example: 2}
+      $ref: './components/schemas/shared.yaml#/Paginated'
 
     # === Auth === #
     RegisterIn:
-      type: object
-      required: [fullname, email, password]
-      properties:
-        fullname: 
-          type: string
-          minLength: 4
-          maxLength: 50
-          example: "Luisa Natalia Cantú Ramírez"
-          description: "Mínimo de caracteres para el Nombre del Usuario es: 4"
-        email: 
-          type: string
-          format: email
-          example: "luigi@example.com"
-        password: 
-          type: string
-          minLength: 8
-          maxLength: 120
-          example: "LuigiLove0407Fan"
-          description: "Mínimo de 8 caracteres & al menos 1 Dígito"
-        display_name: 
-          type: string
-          maxLength: 80
-          nullable: true
-          example: "FIFA Fan"
-
+      $ref: './components/schemas/auth.yaml#/RegisterIn'
     LoginIn:
-      type: object
-      required: [email, password]
-      properties:
-        email: {type: string, format: email, example: "LuigiLove0407Fan"}
-        password: {type: string, example: "luigiFanFest0407"}
-
-    TokenOut: 
-      type: object
-      required: [access_token, token_type, expire_in]
-      properties:
-        access_token: { type: string, example: "eyJhbGciOiJIUzI1NiIs..." }
-        token_type: { type: string, example: "bearer" }
-        expire_in: { type: integer, example: 1800, description: "Segundos(Seconds)" }
-
-    UserOut: 
-      type: object
-      required: [user_id, email, role, is_active, created_at]
-      properties: 
-        user_id: {type: string, format: uuid}
-        email: {type: string, format: email}
-        display_name: {type: string, nullable: true}
-        role: {type: string, enum: [admin, editor, reader]}
-        is_active: {type: boolean}
-        created_at: {type: string, format: date_time}
-
+      $ref: './components/schemas/auth.yaml#/LoginIn'
+    TokenOut:
+      $ref: './components/schemas/auth.yaml#/TokenOut'
+    UserOut:
+      $ref: './components/schemas/auth.yaml#/UserOut'
     UserUpdateIn:
-      type: object
-      properties:
-        display_name: { type: string, maxLength: 80, nullable: true } 
-
+      $ref: './components/schemas/auth.yaml#/UserUpdateIn'
     ChangePasswordIn:
-      type: object
-      required: [ current_password, new_password ]
-      properties:
-        current_password: { type: string }
-        new_password: { type: string, min_length: 8, max_length: 128 }
+      $ref: './components/schemas/auth.yaml#/ChangePasswordIn'
 
     # === Teams (Tipado) === #
-    TeamOut: 
-      type: object
-      required: [ team_id, initials, name, active ]
-      properties:
-        team_id:        { type: integer, example: 1 }
-        initials:       { type: string, example: "BRA" }
-        name:           { type: string, example: "Brazil" }
-        confederation:  { type: string, nullable: true, example: "CONMEBOL"}
-        fifa_code:      { type: string, nullable: true, example: "BRA" }
-        active:         { type: boolean, example: true }
-
-    TeamStatsOut: 
-      type: object
-      properties:
-        initials:       { type: string, example: "BRA" }
-        name:           { type: string, example: "Brazil" }
-        confederation:  { type: string, nullable: true}
-        tournaments_played: { type: integer, example: 22 }
-        titles:         { type: integer, example: 5 }
-        runner_ups:     { type: integer, example: 2 }
-        total_matches:  { type: integer, example: 114 }
-        wins:           { type: integer, example: 76 }
-        draws:          { type: integer, example: 18 }
-        losses:         { type: integer, example: 3 }
-        goals_scored:   { type: integer, example: 237 }
-        goals_conceded: { type: integer, example: 101 }
-        goals_difference: { type: integer, example: 136 }
-        win_rate_pct:   { type: number, example: 66.67 }
-
+    TeamOut:
+      $ref: './components/schemas/teams.yaml#/TeamOut'
+    TeamStatsOut:
+      $ref: './components/schemas/teams.yaml#/TeamStatsOut'
     TeamIn:
-      type: object
-      required: [initials, name]
-      properties:
-        initials:       { type: string, minLength: 2, max_length: 3, example: "POR" }
-        name:           { type: string, max_length: 100, example: "Portugal"}
-        confederation:  { type: string, nullable: true, example: "CONMEBOL" }
-        active:         { type: boolean, default: true }
-
+      $ref: './components/schemas/teams.yaml#/TeamIn'
     TeamUpdate:
-      type: object
-      properties:
-        name:           { type: string, max_length: 100, nullable: true }
-        confederation:  { type: string, nullable: true }
-        active:         { type: boolean, nullable: true }
+      $ref: './components/schemas/teams.yaml#/TeamUpdate'
 
     # === Tournament (Tipado) === #
     TournamentOut:
-      type: object
-      required: [tournament_id, year, host_country, winner, runners_up, goals_scored, qualified_teams, matches_played]
-      properties:
-        tournament_id:    { type: integer, example: 1 }
-        year:             { type: integer, example: 1930 }
-        host_country:     { type: string, example: "Uruguay" }
-        winner:           { type: string, example: "Uruguay" }
-        runner_ups:       { type: string, example: "Argentina" }
-        third_place:      { type: string, nullable: true, example: "USA" }
-        fourth_place:     { type: string, nullable: true, example: "Yugoslavia" }
-        goals_scored:     { type: integer, example: 70 }
-        qualified_teams:  { type: integer, example: 13 }
-        matches_played:   { type: integer, example: 18 }
-        attendance_total: { type: integer, nullable: true,  example: 590549 }
-        avg_goals_per_match: { type: number, nullable: true,  example: 3.89 }
-
-      TournamentListOut:
-        type: object
-        properties:
-          tournament_id:  { type: integer, example: 1 }
-          year:           { type: integer, example: 1930 }
-          host_country:   { type: string, example: "Uruguay" }
-          winner:         { type: string, example: "Uruguay" }
-          goals_scored:   { type: integer, example: 70 }
-          matches_played: { type: integer, example: 18 }
-
-      TournamentIn:
-        type: object
-        required: [year, host_country, winner, runners_up, goals_scored, qualified_teams, matches_played]
-        properties:
-          year:             { type: integer, minimum: 1930, maximum: 2030 }
-          host_country:     { type: string, maxlength: 100}
-          winner:           { type: string, maxlength: 100 }
-          runner_ups:       { type: string, maxLength: 100 }
-          third_place:      { type: string, nullable: true }
-          fourth_place:     { type: string, nullable: true }
-          goals_scored:     { type: integer, minimum: 0}
-          qualified_teams:  { type: integer, minimum: 1, maximum: 48 }
-          matches_played:   { type: integer, minimum: 1 }
-          attendance_total: { type: integer, nullable: true}
-
-      TournamentUpdate: 
-        type: object
-        properties:
-          winner:           { type: string, nullable: true }
-          runner_ups:       { type: string, nullable: true }
-          goals_scored:     { type: integer, minimum: 0, nullable: true }
-          attendance_total: { type: integer, nullable: true }
-
+      $ref: './components/schemas/tournaments.yaml#/TournamentOut'
+    TournamentListOut:
+      $ref: './components/schemas/tournaments.yaml#/TournamentListOut'
+    TournamentIn:
+      $ref: './components/schemas/tournaments.yaml#/TournamentIn'
+    TournamentUpdate:
+      $ref: './components/schemas/tournaments.yaml#/TournamentUpdate'
 
     # === Matches (Tipado) === #
-      MatchOut:
-        type: object
-        required: [match_id, tournament_id, year, stage, match_datetime, home_team_initials, away_team_initials, home_goals, away_goals]
-        properties:
-          match_id:           { type: integer, example: 1 }
-          tournament_id:      { type: integer, example: 1 }
-          year:               { type: integer, example: 1930 }
-          stage:              { type: string, example: "Group 1" }
-          match_datetime:     { type: string, format: date-time, example: "1930-07-13T15:00:00Z" }
-          stadium:            { type: string, nullable: true, example: "Pocitos" }
-          city:               { type: string, nullable: true, example: "Montevideo" }
-          home_team_initials: { type: string, example: "FRA" }
-          away_team_initials: { type: string, example: "MEX" }
-          home_team_name:     { type: string, nullable: true, example: "France" }
-          away_team_name:     { type: string, nullable: true, example: "Mexico" }
-          home_goals:         { type: integer, example: 4 }
-          away_goals:         { type: integer, example: 1 }
-          ht_home_goals:      { type: integer, nullable: true, example: 3 }
-          ht_away_goals:      { type: integer, nullable: true, example: 0 }
-          win_conditions:     { type: string, nullable: true, example: null }
-          attendance:         { type: integer, nullable: true, example: 4444 }
-          referee:            { type: string, nullable: true, example: "LOMBARDI Domingo (URU)" }
- 
-      MatchListOut:
-        type: object
-        properties:
-          match_id:           { type: integer }
-          year:               { type: integer }
-          stage:              { type: string }
-          match_datetime:     { type: string, format: date-time }
-          home_team_initials: { type: string }
-          away_team_initials: { type: string }
-          home_goals:         { type: integer }
-          away_goals:         { type: integer }
-
+    MatchOut:
+      $ref: './components/schemas/matches.yaml#/MatchOut'
+    MatchListOut:
+      $ref: './components/schemas/matches.yaml#/MatchListOut'
 
     # === Players (Tipado) === #
-      PlayerAppearOut:
-        type: object
-        properties:
-        player_match_id:          { type: integer }
-        match_id:                 { type: integer }
-        team_initials:            { type: string, example: "FRA" }
-        coach_name:               { type: string, nullable: true, example: "CAUDRON Raoul (FRA)" }
-        lineup_type:              { type: string, enum:[S, N], description: "S=Titular & N=Suplente"}
-        shirt_number:             { type: integer, nullable: true }
-        player_name:              { type: string, example: "Alex Thepot" }
-        position:                 { type: string, nullable: true, enum: [GK, DF, MF, FW, null] }
-        event_code:               { type: string, nullable: true, example: "G", description: "G=gol, Y=Yellw Card, R=Red Card, OG=Propia"  }
-
-      PlayerCareerOut: 
-        type: object
-        properties:
-          player_name:        { type: string }
-          team_initials:      { type: string } 
-          total_appearances:  { type: integer }
-          starts:             { type: integer }
-          substitution:       { type: integer }
-          goals:              { type: integer }
-          yellow_cards:       { type: integer }
-          red_cards:          { type: integer }
-          editions:           { type: array, items: { type: integer } }
-
-      PlayerScoreOut: 
-        type: object
-        properties:
-          player_name:    { type: string, example: "Miroslav KLOSE" }
-          team_initials:  { type: string, example: "GER" }
-          goals:          { type: integer, example: 16 }
-          own_goals:      { type: integer, example: 0 }
-          matches_played: { type: integer, example: 24 }
-          first_wc:       { type: integer, example: 2002 }
-          last_wc:        { type: integer, example: 2014 }
-          editions:       { type: integer, example: 4 }
-
-
-    # === Analytics (Tipado | Análisis de datos) === #
-
+    PlayerAppearOut:
+      $ref: './components/schemas/players.yaml#/PlayerAppearOut'
+    PlayerCareerOut:
+      $ref: './components/schemas/players.yaml#/PlayerCareerOut'
+    TopScorerOut:
+      $ref: './components/schemas/players.yaml#/TopScorerOut'
 
     # === ADMIN (Tipado | Roles del Usuario - permisos) | ETL Execute === #
-      AdminUserOut:
-        type: object
-        properties:
-          user_id:      { type: string, format: uuid }
-          email:        { type: string, format: email }
-          display_name: { type: string, nullable: true }
-          role:         { type: string, enum: [admin, editor, reader] }
-          is_active:    { type: boolean }
-          created_at:   { type: string, format: date-time }
-          updated_at:   { type: string, format: date-time }
- 
-      AdminUserUpdate:
-        type: object
-        properties:
-          role:      { type: string, enum: [admin, editor, reader], nullable: true }
-          is_active: { type: boolean, nullable: true }
-  
-      EtlTriggerIn:
-        type: object
-        properties:
-          dataset:
-            type: string
-            enum: [all, winners, matches, players]
-            default: all
-  
-      EtlStatusOut:
-        type: object
-        properties:
-          run_id:       { type: integer, nullable: true }
-          dataset:      { type: string, nullable: true }
-          worker:       { type: string, nullable: true }
-          status:       { type: string, enum: [running, success, failed, partial] }
-          started_at:   { type: string, format: date-time, nullable: true }
-          finished_at:  { type: string, format: date-time, nullable: true }
-          rows_loaded:  { type: integer, nullable: true }
-          rows_rejected: { type: integer, nullable: true }
-          duration_s:   { type: number, nullable: true }
-          triggered_by: { type: string, nullable: true }
-  
-      DeadLetterOut:
-        type: object
-        properties:
-          dl_id:         { type: integer }
-          source_table:  { type: string }
-          source_row_id: { type: integer }
-          error_code:    { type: string, example: "MISSING_YEAR" }
-          error_detail:  { type: string, nullable: true }
-          rejected_at:   { type: string, format: date-time }
-
+    AdminUserOut:
+      $ref: './components/schemas/admin.yaml#/AdminUserOut'
+    AdminUserUpdate:
+      $ref: './components/schemas/admin.yaml#/AdminUserUpdate'
+    EtlTriggerIn:
+      $ref: './components/schemas/admin.yaml#/EtlTriggerIn'
+    EtlStatusOut:
+      $ref: './components/schemas/admin.yaml#/EtlStatusOut'
+    DeadLetterOut:
+      $ref: './components/schemas/admin.yaml#/DeadLetterOut'
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ─── === RESPONSES REUTILIZABLES [Tomamos los schemas] === ----
+# ─── === RESPONSES REUTILIZABLES === ----
 # ─────────────────────────────────────────────────────────────────────────────
   responses:
 
@@ -422,23 +147,23 @@ components:
       content: 
         application/json:
           schema:
-            { $ref: "#/components/schemas/Error"}
+            { $ref: "./components/schemas/shared.yaml#/Error"}
           example: { detail: "Credenciales Inválidas o Expiraron (tiempo)" }
 
-    forbidden: 
+    Forbidden: 
       description: Sin permisos suficientes
       content:
         application/json:
           schema:
-            { $ref: "#/components/schemas/Error" }
-          example: { detaiL: "Acceso Denegado | Falta de permisos | Permisos insuficientes" }
+            { $ref: "./components/schemas/shared.yaml#/Error" }
+          example: { detail: "Acceso Denegado | Falta de permisos | Permisos insuficientes" }
 
     NotFound: 
       description: Recurso no encontrado
       content: 
         application/json: 
           schema:
-            { $ref: "#/components/schemas/Error"}
+            { $ref: "./components/schemas/shared.yaml#/Error"}
           example: { detail: "Recurso no encontrado" }
 
     UnprocessableEntity:
@@ -446,19 +171,18 @@ components:
       content:
         application/json: 
           schema:
-            { $ref: "#/components/schemas/Error" }
+            { $ref: "./components/schemas/shared.yaml#/Error" }
 
     Conflict: 
       description: Conflicto (Conflict) - Recurso ya existe ( No podemos obtener doble)
       content:
         application/json:
           schema:
-            { $ref: "#/components/schemas/Error"}
+            { $ref: "./components/schemas/shared.yaml#/Error"}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ───- === PARAMETERS REUTILIZABLES ==== -----
 # ─────────────────────────────────────────────────────────────────────────────
-
   parameters:
     
     PageParam:
@@ -496,9 +220,9 @@ components:
       in: path
       required: true
       schema:
-        { type: string, minLength: 2, maximum: 3 }
+        { type: string, minLength: 2, maxLength: 3 }
       description: Iniciales FIFA del País. (e) BRA, FRA, MEX
-      
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ====== PATHS | [Roots / Rutas] | Endpoints ======
 # ─────────────────────────────────────────────────────────────────────────────
@@ -508,962 +232,95 @@ paths:
     # SYSTEM — Health (Bien en ejecución) checks
     # ══════════════════════════════════════════════════════════════ # 
   /api/health:
-    get:
-      tags: [System]
-      summary: Health Check Basic (Execute good | Status OK)
-      description: Siempre retorna 'Status 200 ok'. Usado por Docker / NGINX / Load Balancer
-      operationId: health_check
-      responses: 
-        "200":
-          description: Servicio Activo (Service Active)
-          content:
-            application/json:
-              schema:
-                { $ref:"#/components/schemas/HealthOut"}
-              example: { status: ok, version: "0.1.0", environment: development }
-
+    $ref: './paths/health.yaml#/~1api~1health'
   /api/health/db:
-    get:
-      tags: [System]
-      summary: Conectividad a PostgresSQL
-      operationId: health_db
-      responses: 
-        "200":
-          description: Estado de conexión a DB
-          content:
-            application/json:
-              schema:
-                { $ref: "#/components/schemas/ComponentHealthOut" }
-              example: { component: db, status: ok, latency_me: 2.4 }
-
+    $ref: './paths/health.yaml#/~1api~1health~1db'
   /api/health/storage:
-    get:
-      tags: [System]
-      summary: Conectividad a MiniO - Storage s3
-      operationId: health_storage
-      responses:
-        "200":
-          description: Estado de conexión con MiniO - OK
-          content: 
-            application/json:
-              schema:
-                { $ref:"$/components/schemas/ComponentsHealthOut" }
+    $ref: './paths/health.yaml#/~1api~1health~1storage'
 
     # ══════════════════════════════════════════════════════════════ # 
-    # AUTH [CRUD:  Create (POST),  Read (GET), Update (PUT/PATH), Delete (DELETE)] - HTTP Status / Methods 
+    # AUTH [CRUD: POST, GET, UPDATE, DELETE] - HTTP Status / Methods 
     # ══════════════════════════════════════════════════════════════ #
   /api/v1/auth/register:
-    post: 
-      tags: [Authentication]
-      summary: Registrar nuevo Usuario | Register new User
-      operationId: auth_register
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {ref: "$#/components/schemas/RegisterIn"}
-      responses:
-        "201":
-          description: Usuario Creado - Retorna Acceso al Token (Access Token) | Creamos Cuenta
-          headers: 
-            Set-Cookies: 
-              description: "Refresh_token HTTP-only cokkies"
-              schema: { type: string }
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/TokenOut"}
-        "409": { $ref: "#/components/responses/Conflict" }
-        "422": { $ref: "#/components/responses/UnprocessableEntity" }
-
+    $ref: './paths/auth.yaml#/~1api~1v1~1auth~1register'
   /api/v1/auth/login:
-    post:
-      tags: [Authentication]
-      summary: Iniciar Sesión (Init Session)
-      operationId: auth_login
-      requestBody:
-        required: true
-        content: 
-          application/json:
-            schema:
-              { $ref: "#/components/schemas/loginIn" }
-      responses:
-        "200":
-          description: Login Existoso (inicio de sesión, acceso o conexión)
-          headers: 
-            Set-Cookie:
-              description: "refresh_token HTTP-only cookie (path=/api/v1/auth/refresh)"
-              schema:
-                { $ref: "#/components/schemas/TokenOut" }
-        "409": { $ref: "#/components/responses/Conflict" }
-        "422": { $ref: "#/components/responses/UnprocessableEntity" }
-
-  /api/v1/auth/refresh: 
-    post: 
-      tags: [Authentication]
-      summary: Renovar Access Token (Refresh Access Token)
-      operationId: auth_refresh
-      description: |
-        Usa el 'Refresh Access Token | refresh_token' de la cookie HTTP-only para emitir un nuevo access token.
-        El Refresh token se rota en cada llamada (renueva). 
-      security: 
-        - RefreshCookie: []
-      responses: 
-        "200":
-          description: Nuevo Access Token emitido (Token Renovado)
-          content: 
-            application/json: 
-              schema: { $ref: "#/components/schemas/TokenOut"}
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+    $ref: './paths/auth.yaml#/~1api~1v1~1auth~1login'
+  /api/v1/auth/refresh:
+    $ref: './paths/auth.yaml#/~1api~1v1~1auth~1refresh'
   /api/v1/auth/logout:
-    post:
-      tags: [Authentication]
-      summary: Cerrar Sesión (Close Session)
-      operationId: auth_logout
-      security: 
-        - BearerAuth: []
-      responses: 
-        "204": { description: Sesión Cerrada - Cookies Eliminadas }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+    $ref: './paths/auth.yaml#/~1api~1v1~1auth~1logout'
   /api/v1/auth/me:
-    get:
-      tags: [Authentication]
-      summary: Perfil del usuario autenticado (Mí perfíl)
-      operationId: auth_me_get
-      security:
-        - BearerAuth: []
-      responses:
-        "200":
-          description: Perfil del usuario | Actualizado & Autenticado
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/UserOut" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
-    patch:
-      tags: [Authentication]
-      summary: Actualizar perfil propio | Actualizo mi perfíl (Password) & Authentication & Authorization
-      description: Solo permite cambiar `display_name`. El rol no es modificable por el usuario.
-      operationId: auth_me_patch
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/UserUpdateIn" }
-      responses:
-        "200":
-          description: Perfil actualizado
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/UserOut" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-
+    $ref: './paths/auth.yaml#/~1api~1v1~1auth~1me'
   /api/v1/auth/change-password:
-    post:
-      tags: [Authentication]
-      summary: Cambiar contraseña (Actualizar el password / contraseña)
-      operationId: auth_change_password
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/ChangePasswordIn" }
-      responses:
-        "204": { description: Contraseña actualizada & Autenticada & Autorizada }
-        "400": { description: Contraseña actual incorrecta }
-        "401": { $ref: "#/components/responses/Unauthorized"}
-      
+    $ref: './paths/auth.yaml#/~1api~1v1~1auth~1change-password'
 
     # ══════════════════════════════════════════════════════════════ #
     # TEAMS
     # ══════════════════════════════════════════════════════════════ #
-
   /api/v1/teams:
-    get:
-      tags: [Teams]
-      summary: Listar (orden) todos las Selecciones de Fútbol
-      operationId: teams_list
-      parameters:
-        - name: active
-          in: query
-          schema: { type: boolean }
-          description: Filtrar por Selecciones (equipos) Activos/disueltos (eliminados) 
-        - name: confederation
-          in: query
-          schema: { type: string }
-          description: "UEFA | CONMEBOL | CAF | AFC | CONCACAF | OFC"
-      responses: 
-        "200":
-          description: Lista de Selecciones (Equipos)
-          content: 
-            application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/TeamOut" }
-
-    post: 
-      tags: [Teams]
-      summary: Crear selección/equipo (admin)
-      operationId: teams_create
-      security: 
-        - BearerAuth: []
-      requestBody: 
-        required: true
-        content: 
-          application/json:
-            schema:
-              { $ref: "#/components/schemas/TeamIn" }
-      responses: 
-        "201":
-          description: Equipo/Selección creado
-          content: 
-            application/json:
-              schema:
-                { $ref: "#/components/schemas/TeamOut" }
-        "401": { $ref: "#/components/schemas/Unauthorized" }
-        "403": { $ref: "#/components/schemas/Forbidden" }
-        "409": { $ref: "#/components/schemas/Conflict" }
-
+    $ref: './paths/teams.yaml#/~1api~1v1~1teams'
   /api/v1/teams/ranking:
-    get:
-      tags: [Teams]
-      summary: Ranking Histórico de Selecciones de Fútbol en el Mundial
-      operationId: teams_ranking
-      parameters:
-        - name: sort_by
-          in: query
-          schema:
-            type: string
-            enum: [titles, wins, goals_scored, total_matches]
-            default: titles
-        - name: min_matches
-          in: query
-          schema: 
-            { type: integer, default: 3 }
-          description: Mínimo de Partidos jugados para aparecer
-      responses: 
-        "200":
-          description: Ranking de la Selección/Equipo con stats (Estadísticas) históricas
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/TeamStatsOut" }
-
+    $ref: './paths/teams.yaml#/~1api~1v1~1teams~1ranking'
   /api/v1/teams/{initials}:
-    get: 
-      tags: [Teams]
-      summary: Detalles (Details) & Estadísticas (stats) de una Selección/Equipo
-      operationId: teams_get
-      parameters:
-        - $ref: "#/components/parameters/InitialsParam"
-      responses:
-        "200":
-          description: Estadísticas (Stats) históricas de la Selección / Equipo
-          content: 
-            application/json: 
-              schema:
-                { $ref: "#/components/parameters/InitialsParam" }
-        "404": { $ref: "#/components/responses/NotFound"}
-    
-    patch:
-      tags: [Teams]
-      summary: Actualizar selección/equipo (admin) 
-      operationId: teams_update
-      security: 
-        - BearerAuth: []
-      parameters: 
-        - $ref: "#/components/parameters/InitialsParam"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              { $ref: "/components/schemas/TeamUpdate" }
-      responses:
-        "200":
-          description: Selección/Equipo Actualizado (Información)
-          content: 
-            application/json: 
-              schema:
-                { $ref: "#/components/schemas/TeamOut" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+    $ref: './paths/teams.yaml#/~1api~1v1~1teams~1{initials}'
   /api/v1/teams/{initials}/matches:
-    get:
-      tags: [Teams]
-      summary: Historial de partidos de una Seleciión/Equipos en un Mundial
-      operationId: team_matches
-      parameters:
-        - $ref: "#/components/parameters/InitialsParam"
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
-        - name: year 
-          in: query
-          schema:
-            { type: integer }
-        - name: stage
-          in: query
-          schema:
-            { type: string }
-      responses:
-        "200":
-          description: Partidos Paginados (por página) de cada selección/equipo
-          content: 
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/Paginated"
-                  - type: object
-                    properties:
-                      items:
-                        type: array
-                        items: { $ref: "#/components/schemas/MatchListOut" }
-        "404": { $ref: "#/components/responses/NotFound"}
-
+    $ref: './paths/teams.yaml#/~1api~1v1~1teams~1{initials}~1matches'
   /api/v1/teams/{initials}/vs/{opponent}:
-    get:
-      tags: [Teams]
-      summary: Head-to-Head (Cara a cara) entre dos Selecciones
-      operationId: teams_head_to_head
-      parameters:
-        - $ref: "#/components/parameters/InitialsParam"
-        - name: opponent
-          in: path
-          required: true
-          schema:
-            { type: string, minLength: 2, maxLength: 3 }
-      responses:
-        "200":
-          description: Historial directo entre las dos selecciones/equipos
-          content: 
-            application/json:
-              schema:
-                type: object
-                properties:
-                    team_a:           { type: string }
-                    team_b:           { type: string }
-                    total_matches:    { type: integer }
-                    team_a_wins:      { type: integer }
-                    team_b_wins:      { type: integer }
-                    draws:            { type: integer }
-                    team_a_goals:     { type: integer }
-                    team_b_goals:     { type: integer }
-                    first_encounter:  { type: integer }
-                    last_encounter:   { type: integer }
+    $ref: './paths/teams.yaml#/~1api~1v1~1teams~1{initials}~1vs~1{opponent}'
 
     # ══════════════════════════════════════════════════════════════ #
     # TOURNAMENTS
     # ══════════════════════════════════════════════════════════════ #
   /api/v1/tournaments:
-    get:
-      tags: [Tournaments]
-      summary: Listar todas las ediciones del Mundial (Torneo)
-      operationId: tournament_list
-      parameters: 
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
-        - name: year_from
-          in: query
-          schema: { type: integer, minimum: 1930 }
-        - name: year_to
-          in: query
-          schema: { type: integer, maximum: 2030 }
-      responses: 
-        "200":
-          description: Ediciones (Mundial en orden), paginadas
-          content: 
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/Paginated"
-                  - type: object
-                    properties:
-                      items: 
-                        type: array
-                        items: { $ref: "#/components/schemas/TournamentListOut" } 
-
-    post:
-      tags: [Tournaments]
-      summary: Crear Ediciones (Torneo) - (admin)
-      operationId: tournaments_create
-      security:
-        - BearerAuth: []
-      requestBody: 
-        required: true
-        content:
-          application/json:
-            schema:
-              { $ref: "#/components/schemas/TournamentIn"}
-      responses:
-        "201": 
-          description: Edición (Torneo) Creado
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/TournamentOut" }
-        "401": { $ref: "#/components/schemas/Unauthorized" }
-        "403": { $ref: "#/components/schemas/Forbidden" }
-        "409": { $ref: "#/components/schemas/Conflict" }
-
-  /api/v1/tournaments/{year}: 
-    get: 
-      tags: [Tournaments]
-      summary: Mundiales (torneo), detallado por año
-      operationId: tournaments_get
-      parameters:
-        - $ref: "#/components/parameters/YearParam"
-      responses:
-        "200":
-          description: Edición (torneo por año) con estadísticas (stats) completas
-          content: 
-            application/json:
-              schema:
-                { $ref: "#/components/schemas/TournamentOut"}
-        "404": { $ref: "#/components/responses/NotFound" }
-
-    patch:
-      tags: [Tournaments]
-      summary: Actualizar edición - Mundial por año (admin)
-      operationId: tournaments_update
-      security: 
-        - BearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/YearParam"
-      requestBody:
-        required: true
-        content: 
-          application/json: 
-            schema:
-              { $ref: "#/components/schemas/TournamentUpdate" }
-      responses: 
-        "200":
-          description: edición (Torneo Mundial) actualizado
-          content: 
-            application/json:
-              schema:
-                { $ref: "#/components/schemas/TournamentOut"}
-        "401": { $ref: "#/components/responses/unauthorized" }
-        "403": { $ref: "#/components/responses/forbidden" }
-        "404": { $ref: "#/components/responses/notFound" }
-
-    delete: 
-      tags: [Tournaments]
-      summary: Eliminar edición mundialista (Torneo) 
-      description: |
-        **ADVERTENCIA**: Solo eliminar si no tiene matches asociados.
-        Los datos históricos no deben eliminarse — usar con precaución.
-      operationId: tournaments_delete
-      security: 
-        - BearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/YearParam"
-      responses: 
-        "204": {description: "Edition Delete (Torneo Eliminado)"}
-        "401": { $ref: "#/components/responses/Unauthorized"}
-        "403": { $ref: "#/components/responses/Forbidden"}
-        "404": { $ref: "#/components/responses/NotFound"}
-
+    $ref: './paths/tournaments.yaml#/~1api~1v1~1tournaments'
+  /api/v1/tournaments/{year}:
+    $ref: './paths/tournaments.yaml#/~1api~1v1~1tournaments~1{year}'
   /api/v1/tournaments/{year}/matches:
-    get: 
-      tags: [Tournaments]
-      summary: Partidos jugados por edición (Torneo) | Por año
-      operationId: tournaments_matches
-      parameters: 
-        - $ref: "#/components/parameters/YearParam"
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
-        - name: stage
-          in: query
-          schema:
-            { type: string }
-          description: "filtrar por fase (Etapas del torneo): Group 1, Final, etc."
-      responses: 
-        "200":
-          description: Partidos paginados (orden) de la edición (Por torneo)
-          content: 
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/Paginated"
-                  - type: object
-                    properties: 
-                      items: 
-                        type: array
-                        items: { $ref: "#/components/schemas/MatchListOut"}
-        "404": { $ref: "#/components/responses/NotFound" }
-
+    $ref: './paths/tournaments.yaml#/~1api~1v1~1tournaments~1{year}~1matches'
   /api/v1/tournaments/{year}/top-scorers:
-    get: 
-      tags: [Tournaments]
-      operationId: tournaments_top_scorers
-      parameters: 
-        - $ref: "#/components/parameters/YearParam"
-        - name: top
-          in: query
-          schema: { type: integer, default: 10, minimum:1, maximum: 50 }
-      responses: 
-        "200": 
-          description: Top goleadores de la edición (Torneo | Mundial)
-          content: 
-            application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/TopScorerOut" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
-  /api/v1/tournaments/{year}/teams: 
-    get: 
-      tags: [Tournaments]
-      summary: Equipos/Selecciones participantes por edición (Torneo/Mundial)
-      operationId: tournaments_teams
-      parameters: 
-        - $ref: "#/components/parameters/YearParam"
-      responses: 
-        "200":
-          description: Equipos/Selecciones que participaron en esa edición (Torneo/Mundial)
-          content: 
-            application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/TeamOut"}
-        "404": { $ref: "#/components/responses/NotFound"}        
-
+    $ref: './paths/tournaments.yaml#/~1api~1v1~1tournaments~1{year}~1top-scorers'
+  /api/v1/tournaments/{year}/teams:
+    $ref: './paths/tournaments.yaml#/~1api~1v1~1tournaments~1{year}~1teams'
 
     # ══════════════════════════════════════════════════════════════ #
     # MATCHES
     # ══════════════════════════════════════════════════════════════ #
-
   /api/v1/matches:
-    get: 
-      tags: [Matches]
-      summary: Listar partidos con filtros (Orden los partidos del Torneo/Mundial)
-      operationId: matches_list
-      parameters:
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
-        - name: year
-          in: query
-          schema:
-            { type: integer }
-        - name: stage
-          in: query
-          schema:
-            { type: string }
-        - name: team 
-          in: query
-          schema:
-            { type: string, maxLength: 3 }
-          description: "Iniciales del Equipo/Selección (Iniciales) - Local & Visitante"
-        - name: min_goals
-          in: query
-          schema:
-            { type: integer, minimum: 0 }
-          description: "Mínimo de Total de Goles en un Partido del Mundial"
-      responses:
-        "200":
-          description: Partidos Paginados (Lista | Filtros)
-          content: 
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/Paginated"
-                  - type: object
-                properties:
-                  type: array
-                  items: {$ref: "#/components/schemas/MatchListOut"}
-
+    $ref: './paths/matches.yaml#/~1api~1v1~1matches'
   /api/v1/matches/search:
-    get:
-      tags: [Matches]
-      summary: Búsqueda por texto libre (Buscar su País/Selección)
-      description: Buscar una Selección, Estadio, Ciudad o árbitro
-      operationId: matches_search
-      parameters:
-        - name: q
-          in: query
-          required: true
-          schema: { type: string, minimum: 2 }
-        - name: limit
-          in: query
-          schema: { type: integer, default: 10, maximum: 50}
-      responses: 
-        "200":
-          description: Resultado de Búsqueda (Search Result)
-          content: 
-            application/jason:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/MatchListOut"}
-
+    $ref: './paths/matches.yaml#/~1api~1v1~1matches~1search'
   /api/v1/matches/{match_id}:
-    get: 
-      tags: [Matches]
-      summary: Identificador único a detalle de un partido | Detalles Completos
-      operationId: matches_get
-      parameters:
-        - $ref: "#/components/parameters/MatchIdpARAM"
-      responses: 
-        "200":
-          description: Datos a detalle & Completos del partido
-          content: 
-            application/json: 
-              schema: { -$ref: "#/components/schemas/MatchOut" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+    $ref: './paths/matches.yaml#/~1api~1v1~1matches~1{match_id}'
   /api/v1/matches/{match_id}/player:
-    get: 
-      tags: [Matches]
-      summary: Plantillas (Jugadores) de ambas selecciones/equipos en un partido
-      operationId: matches_players
-      parameters:
-        - $ref: "#/components/parameters/MatchIdParam"
-      responses: 
-        "200":
-          description: Plantilla (Jugadores) - Titulares, Suplentes y Eventos de ambas Selecciones
-          content:
-            application/json: 
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/PlayerAppearanceOut" }
-        "404": 
-          { $ref: "#/components/responses/NotFound" }
-          
+    $ref: './paths/matches.yaml#/~1api~1v1~1matches~1{match_id}~1player'
+
     # ══════════════════════════════════════════════════════════════ #
     # PLAYERS
     # ══════════════════════════════════════════════════════════════ #
   /api/v1/players:
-    get: 
-      tags: [Players]
-      summary: Listar (orden) apariciones de jugadores (dentro del Mundial/Torneo). Agregamos filtros
-      operationId: players_list
-      parameters:
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
-        - name: team 
-          in: query 
-          schema:
-            { type: string, minLength: 3 }
-      responses:
-        "200": 
-          description: Apariciones dentro del Torneo/Mundial & por Páginas
-          content:
-            application/jason: 
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/Paginated"
-                  - type: object
-                    properties:
-                      items:
-                        type: array
-                        items: { $ref: "#/component/schemas/PlayerAppearanceOut" }
-
+    $ref: './paths/players.yaml#/~1api~1v1~1players'
   /api/v1/players/search:
-    get:
-      tags: [Players]
-      summary: Búsqueda (search) de jugadores por nombre 
-      description: Usar 'pg_trgm' (postgres) para búsquedas parcial tolerante a acentos 
-      operationId: players_search
-      parameters:
-        - name: q 
-          in: query
-          required: true
-          schema:
-            { type: integer, default: 10, maximum: 50 }
-      responses: 
-        "200":
-          description: Búsqueda (search) jugadores encontrados
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/PlayerAppearanceOut" }
-
+    $ref: './paths/players.yaml#/~1api~1v1~1players~1search'
   /api/v1/players/top-scorers:
-    get: 
-      tags: [Players]
-      summary: Goleadores Históricos del Mundial/Torneo en la Historia
-      operationId: players_top-scorers
-      parameters:
-        - name: top
-          in: query
-          schema:
-            { type: integer, default: 10, minimum: 1, maximum: 50 }
-        - name: team
-          in: query
-          schema:
-            { type: string, maxLength: 3 }
-        - name: position
-          in: query
-          schema:
-            { type: string, enum: [GK, DF, MF, FW] }
-      responses: 
-        "200": 
-          description: Top (máximos) goleadores de todos los Mundiales (Torneo)
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/TopScorerOut" }
-
+    $ref: './paths/players.yaml#/~1api~1v1~1players~1top-scorers'
   /api/v1/players/{name}/career:
-    get:
-      tags: [Players]
-      summary: Historial de rendimiento de un jugador dentro del Mundial (partido)
-      operationId: players_career
-      parameters:
-        - name: name
-          in: path
-          required: true
-          schema: { type: string }
-          description: "Nombre exacto del jugador (case-insensitive)"
-      responses:
-        "200":
-          description: Estadística (Stats) de rendimiento en todos los Mundiales 
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/PlayerCareerOut" }
-        "404": { $ref: "#/components/responses/NotFound" }
+    $ref: './paths/players.yaml#/~1api~1v1~1players~1{name}~1career'
 
     # ══════════════════════════════════════════════════════════════ #
-    # ANALYTICS [WORKERS] — JSON para D3.js / dashboards 
-    # ══════════════════════════════════════════════════════════════ #
-
-    # ══════════════════════════════════════════════════════════════ #
-    # ADMIN — role: admin required [admin, editor, reader]
+    # ADMIN — role: admin required
     # ══════════════════════════════════════════════════════════════ #
   /api/v1/admin/users:
-    get:
-      tags: [Admin]
-      summary: Listar (Ordenar) los usuario que tienen acceso & permisos (role)
-      operationId: admin_user_list
-      security: 
-        - BearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
-        - name: role
-          in: query
-          schema: { type: string, enum: [admin, editor, reader] }
-        - name: is_active
-          in: query
-          schema: { type: boolean }
-      responses: 
-        "200": 
-          description: Usuarios Paginados (ordenados por Páginas & Roles)
-          content: 
-            application/json: 
-              schema:
-                allOf:
-                  - ref: "#/components/schemas/Paginated"
-                  - type: object
-                    properties: 
-                      items: 
-                        type: array
-                        items: { $ref: "#/components/schemas/AdminUserOut" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
-  /api/v1/admin/users/{user_id}: 
-    get:
-      tags: [Admin]
-      summary: Detalles del Usuario
-      operationId: admin_users_get
-      security: 
-      - BearerAuth: []
-      parameters:
-        - name: user_id
-          in: query
-          required: true
-          schema:
-            { type: string, format: uuid }
-      responses: 
-        "200":
-          description: Datos del Usuario (Roles/Acceso/Permisos)
-          content: 
-            application/json: 
-              schema:
-                { $ref: "#/components/schemas/AdminUserOut" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
-    patch: 
-      tags: [Admin]
-      summary: Modificar (Actualizar) el role del Usuario o estado del mismo
-      operationId: admin_users_update
-      security: 
-        - BearerAuth: []
-      parameters:
-        - name: user_id
-          in: path
-          required: true
-          schema:
-            { type: string, format: uuid }
-      requestBody:
-        required: true
-        content:
-          application/jason:
-            schema:
-              { $ref: "#/components/schemas/AdminUserUpdate" }
-      responses: 
-        "200":
-          description: Usuario Actualizado (Update)
-          content:
-            application/json: 
-              schema:
-                { $ref: "#/components/schemas/AdminUserOut" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-      
-    delete: 
-      tags: [Admin]
-      summary: soft delete (Quita lo 'Active') del Usuario
-      description: Establece 'is_active=false'. No elimina datos de auditoría
-      operationId: admin_users_delete
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: user_id
-          in: path 
-          required: true
-          schema: { type: string, format: uuid }
-      responses: 
-        "204": { description: Usuario Desconectado }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
+    $ref: './paths/admin.yaml#/~1api~1v1~1admin~1users'
+  /api/v1/admin/users/{user_id}:
+    $ref: './paths/admin.yaml#/~1api~1v1~1admin~1users~1{user_id}'
   /api/v1/admin/etl/trigger:
-    post:
-      tags: [Admin]
-      summary: Disparar (Funciones | Ejecutan) Pipeline ETL 
-      description: |
-        Encola (acomodar / async) la ejecución del pipeline ETL para el dataset especificado.
-        En producción se despacha de forma asíncrona (Celery / ARQ).
-      operationId: admin_etl_trigger
-      security: 
-        - BearerAuth: []
-      requestBody: 
-        required: true
-        content: 
-          application/json: 
-            schema: { $ref: "#/components/schemas/EtlTriggerIn" }
-      responses: 
-        "200":  
-          description: Pipeline (orden de ejecución) | Cola de Tareas
-          content: 
-            application/json: 
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: "queued" }
-                  dataset: { type: string, example: "all" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+    $ref: './paths/admin.yaml#/~1api~1v1~1admin~1etl~1trigger'
   /api/v1/admin/etl/dead-letter:
-    get: 
-      tags: [Admin]
-      summary: Filas Rechazadas por el Pipeline (dead letter)
-      operationId: admin_etl_dead_letter
-      security: 
-        - BearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
-        - name: dataset
-          in: query
-          schema:
-            { type: string, enum: [winners, matches, players] }
-        - name: error_code
-          in: query
-          schema:
-            { type: string }
-          description: "Filtrar por código de error: MISSING_YEAR, INVALID_DATETIME, etc."
-      responses: 
-        "200":
-          description: Filas rechazadas paginadas (Ordenadas)
-          content: 
-            application/json: 
-              schema:
-                allOf: 
-                  - $ref: "#/components/schemas/Paginated"
-                  - type: object
-                    properties: 
-                      items: 
-                        type: array
-                        items: {$ref: "#/components/schemas/DeadLetterOut"}
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
+    $ref: './paths/admin.yaml#/~1api~1v1~1admin~1etl~1dead-letter'
   /api/v1/admin/warehouse/refresh:
-    post: 
-      tags: [Admin]
-      summary: Forzar refresh de visitas materializadas
-      description: Llama a 'warehouse.refresh_all()' en PostgreSQL
-      operationId: admin_warehouse_refresh 
-      security: 
-        - BearerAuth: []
-      responses: 
-        "200":
-          description: Refresh completado
-          content: 
-            application/json: 
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: "ok" }
-                  message: { type: string, example: "All warehouse views refreshed" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }  
-
+    $ref: './paths/admin.yaml#/~1api~1v1~1admin~1warehouse~1refresh'
   /api/v1/admin/audit-log:
-    get:
-      tags: [Admin]
-      summary: Log (History) de cambios en tablas de producción
-      operationId: admin_audit_log
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
-        - name: table_name
-          in: query
-          schema: { type: string }
-          description: "Filtrar por tabla: tournaments, matches, users, etc."
-        - name: operation
-          in: query
-          schema: { type: string, enum: [I, U, D] }
-          description: "I=insert, U=update, D=delete"
-      responses:
-        "200":
-          description: Entradas del audit log (History) paginadas (Orden de ejecución)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        log_id:      { type: integer }
-                        schema_name: { type: string }
-                        table_name:  { type: string }
-                        operation:   { type: string, enum: [I, U, D] }
-                        changed_by:  { type: string }
-                        changed_at:  { type: string, format: date-time }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }       
+    $ref: './paths/admin.yaml#/~1api~1v1~1admin~1audit-log'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ====== TAGS — orden y descripción en Swagger UI ======

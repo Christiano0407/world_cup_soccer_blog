@@ -1,0 +1,50 @@
+# === Tournament (Tipado) === #
+TournamentOut:
+  type: object
+  required: [tournament_id, year, host_country, winner, runners_up, goals_scored, qualified_teams, matches_played]
+  properties:
+    tournament_id:    { type: integer, example: 1 }
+    year:             { type: integer, example: 1930 }
+    host_country:     { type: string, example: "Uruguay" }
+    winner:           { type: string, example: "Uruguay" }
+    runner_ups:       { type: string, example: "Argentina" }
+    third_place:      { type: string, nullable: true, example: "USA" }
+    fourth_place:     { type: string, nullable: true, example: "Yugoslavia" }
+    goals_scored:     { type: integer, example: 70 }
+    qualified_teams:  { type: integer, example: 13 }
+    matches_played:   { type: integer, example: 18 }
+    attendance_total: { type: integer, nullable: true,  example: 590549 }
+    avg_goals_per_match: { type: number, nullable: true,  example: 3.89 }
+
+TournamentListOut:
+  type: object
+  properties:
+    tournament_id:  { type: integer, example: 1 }
+    year:           { type: integer, example: 1930 }
+    host_country:   { type: string, example: "Uruguay" }
+    winner:         { type: string, example: "Uruguay" }
+    goals_scored:   { type: integer, example: 70 }
+    matches_played: { type: integer, example: 18 }
+
+TournamentIn:
+  type: object
+  required: [year, host_country, winner, runners_up, goals_scored, qualified_teams, matches_played]
+  properties:
+    year:             { type: integer, minimum: 1930, maximum: 2030 }
+    host_country:     { type: string, maxLength: 100}
+    winner:           { type: string, maxLength: 100 }
+    runner_ups:       { type: string, maxLength: 100 }
+    third_place:      { type: string, nullable: true }
+    fourth_place:     { type: string, nullable: true }
+    goals_scored:     { type: integer, minimum: 0}
+    qualified_teams:  { type: integer, minimum: 1, maximum: 48 }
+    matches_played:   { type: integer, minimum: 1 }
+    attendance_total: { type: integer, nullable: true}
+
+TournamentUpdate: 
+  type: object
+  properties:
+    winner:           { type: string, nullable: true }
+    runner_ups:       { type: string, nullable: true }
+    goals_scored:     { type: integer, minimum: 0, nullable: true }
+    attendance_total: { type: integer, nullable: true }
