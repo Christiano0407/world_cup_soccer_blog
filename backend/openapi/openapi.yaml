@@ -1102,6 +1102,39 @@ paths:
                 type: array
                 items: { $ref: "#/components/schemas/MatchListOut"}
 
+  /api/v1/matches/{match_id}:
+    get: 
+      tags: [Matches]
+      summary: Identificador único a detalle de un partido | Detalles Completos
+      operationId: matches_get
+      parameters:
+        - $ref: "#/components/parameters/MatchIdpARAM"
+      responses: 
+        "200":
+          description: Datos a detalle & Completos del partido
+          content: 
+            application/json: 
+              schema: { -$ref: "#/components/schemas/MatchOut" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/matches/{match_id}/player:
+    get: 
+      tags: [Matches]
+      summary: Plantillas (Jugadores) de ambas selecciones/equipos en un partido
+      operationId: matches_players
+      parameters:
+        - $ref: "#/components/parameters/MatchIdParam"
+      responses: 
+        "200":
+          description: Plantilla (Jugadores) - Titulares, Suplentes y Eventos de ambas Selecciones
+          content:
+            application/json: 
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas//PlayerAppearanceOut" }
+        "404": 
+          { $ref: "#/components/responses/NotFound" }
+          
     # ══════════════════════════════════════════════════════════════ #
     # PLAYERS
     # ══════════════════════════════════════════════════════════════ #
