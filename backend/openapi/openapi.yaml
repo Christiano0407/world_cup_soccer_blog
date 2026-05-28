@@ -1040,6 +1040,68 @@ paths:
     # MATCHES
     # ══════════════════════════════════════════════════════════════ #
 
+  /api/v1/matches:
+    get: 
+      tags: [Matches]
+      summary: Listar partidos con filtros (Orden los partidos del Torneo/Mundial)
+      operationId: matches_list
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+        - name: year
+          in: query
+          schema:
+            { type: integer }
+        - name: stage
+          in: query
+          schema:
+            { type: string }
+        - name: team 
+          in: query
+          schema:
+            { type: string, maxLength: 3 }
+          description: "Iniciales del Equipo/Selección (Iniciales) - Local & Visitante"
+        - name: min_goals
+          in: query
+          schema:
+            { type: integer, minimum: 0 }
+          description: "Mínimo de Total de Goles en un Partido del Mundial"
+      responses:
+        "200":
+          description: Partidos Paginados (Lista | Filtros)
+          content: 
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                properties:
+                  type: array
+                  items: {$ref: "#/components/schemas/MatchListOut"}
+
+  /api/v1/matches/search:
+    get:
+      tags: [Matches]
+      summary: Búsqueda por texto libre (Buscar su País/Selección)
+      description: Buscar una Selección, Estadio, Ciudad o árbitro
+      operationId: matches_search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minimum: 2 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10, maximum: 50}
+      responses: 
+        "200":
+          description: Resultado de Búsqueda (Search Result)
+          content: 
+            application/jason:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MatchListOut"}
+
     # ══════════════════════════════════════════════════════════════ #
     # PLAYERS
     # ══════════════════════════════════════════════════════════════ #
