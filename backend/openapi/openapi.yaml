@@ -483,7 +483,7 @@ components:
         { type: integer, minimum: 1930, maximum: 2030 }
       description: Año de la edición del Mundial
 
-    MatchParam: 
+    MatchIdParam: 
       name: match_id
       in: path
       required: true
