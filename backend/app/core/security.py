@@ -17,6 +17,12 @@ from app.core.config import Settings, get_setting
 # - Un hash es una función matemática: 
 # - bcrypt es un algoritmo especializado de hashing para passwords. [Contiene  salt]
 # - Un salt es un valor aleatorio agregado al password.
+# =======
+# Hash	    Función matemática
+# Hashing	Proceso de aplicar hash
+# Hashed	Resultado ya procesado
+# bcrypt	Algoritmo hashing especializado
+# =======
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto") 
 
