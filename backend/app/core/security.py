@@ -13,9 +13,12 @@ from passlib.context import CryptContext
 
 from app.core.config import Settings, get_setting
 
-# ─── Password | Encriptado (bcrypt) | Hash (Hashed ──────────────────────────────── #
+# ─── Password | Encriptado (bcrypt) | Hash (Hashed | HASHEANDO password  | SALT ───────── #
+# - Un hash es una función matemática: 
+# - bcrypt es un algoritmo especializado de hashing para passwords. [Contiene  salt]
+# - Un salt es un valor aleatorio agregado al password.
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto") # - Encriptado -
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto") 
 
 def hash_password(plain:str) -> str:
     return _pwd_context.hash(plain)
