@@ -56,4 +56,37 @@ def _create_token(
     }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
+
+# === Create Access Token ===
+def create_access_token(user_id: str, role: str, settings: Settings) -> str:
+    return _create_token(
+        subject = user_id, 
+        kind = "access", # Type Token
+        expires_delta=timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
+        settings = settings,
+        extra={"role":role} 
+    )
+
+
+# === Refresh Token ===
+def create_refresh_token(user_id:str, settings:Settings) -> str:
+    return _create_token(
+        subject=user_id, 
+        kind="refresh", # Type Token
+        expires_delta=timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS),
+        settings=settings,
+    )
+
+
+# === Decode (Decodificar el Error) Token  | Error Token ===
+def decode_token(token: str, settings: Settings) -> dict[str, Any]: 
+    try: 
+        return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+    except JWTError as exc: 
+        raise HTTPException(
+            status_code = status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales Inválidas o Expiraron | Fecha del 'Token' expiró", 
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
 # ─── FastAPI Dependencies ────────────────────────────────────────────────────
