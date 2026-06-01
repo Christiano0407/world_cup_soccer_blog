@@ -35,5 +35,25 @@ def verify_password(plain:str, hashed:str) -> bool:
 
 # ─── JWT (JSON Web Token) ────────────────────────────────────────────────────────────────
  
+_bearer_scheme = HTTPBearer(auto_error=False)
+
+def _create_token(
+        subject: str, # Usuario
+        kind: str, # Tipo de Token
+        expires_delta: timedelta, # Fecha de Expiración 
+        settings: Settings, # Datos
+        extra: dict[str, Any] | None = None, 
+) -> str: 
+    now = datetime.now(UTC) # Fecha Actual
+    # Payload: Claims [Es un objeto JSON codificado en Base64 que almacena pares clave-valor.]
+    payload: dict[str, Any] = {
+        "sub": subject,
+        "kind": kind,
+        "iat": now, 
+        "exp": now + expires_delta,
+        "jti": str(uuid.uuid4()), # Tipado | Valor único
+        **(extra or {}),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 # ─── FastAPI Dependencies ────────────────────────────────────────────────────
