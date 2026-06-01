@@ -34,4 +34,22 @@ class ConflictError(Exception):
         self.detail = detail
 
 
+class AuthenticationError(Exception):
+    def __init__(self, detail: str = "Credenciales inválidas o han Expirado (Token)") -> None:
+        super().__init__(detail)
+        self.detail = detail
+
+
+class AuthorizationError(Exception):
+    def __init__(self, detail: str = "Acceso Denegado (No tienes Autorización)") -> None:
+        super().__init__(detail)
+        self.detail = detail
+
+
+class BusinessLogicError(Exception):
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+        self.detail = detail
+
+        
 # ─── Handlers ─────────────────────────────────────────────────────────────────
