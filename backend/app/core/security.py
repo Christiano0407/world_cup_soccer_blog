@@ -124,3 +124,44 @@ def get_current_user(
           user:CurrentUser=Depends(_get_current_user)  # noqa: B008
           ) -> CurrentUser:
      return user
+
+
+def require_roles(*roles: str):  # noqa: ANN201
+    """
+        Factory that returns a dependency enforcing role membership.(Fábrica que devuelve una dependencia que impone la membresía del rol.)
+        - 403 Forbidden en la autenticación 'JWT' indica que el servidor rechaza 
+            el acceso porque el token es inválido, está ausente 
+            o carece de los permisos necesarios.
+        - 403 Forbidden indica que el servidor entiende la solicitud pero niega 
+            el acceso porque el cliente carece de los permisos necesarios.
+    """  # noqa: E501
+ 
+    def _dep(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:  # noqa: B008
+        if user.role not in roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado | el token es inválido, está ausente o carece de los permisos necesarios")  # noqa: E501
+        return user
+ 
+    return _dep
+
+
+require_admin = require_roles("admin")
+require_editor_or_admin = require_roles("admin", "editor")
+
+
+def get_refresh_token_from_cookies(
+          refresh_token: str | None = Cookie(default=None, alias="refresh_token"),
+          settings: Settings=Depends(get_setting),  # noqa: B008
+) -> dict[str, Any]:
+    if not refresh_token:
+        raise HTTPException(
+             status_code=status.HTTP_401_UNAUTHORIZED, 
+             detail="Refresh Token Ausente"
+        )
+    payload = decode_token(refresh_token, settings)
+
+    if payload.get("kind") != "refresh":
+        raise HTTPException(
+             status_code=status.HTTP_401_UNAUTHORIZED,
+             detail="Token Inválido - se requiere 'refresh token'"
+        )
+    return payload
