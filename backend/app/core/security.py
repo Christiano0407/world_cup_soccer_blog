@@ -118,3 +118,9 @@ def _get_current_user(
                   detail="Token Inválido - Se requiere access token",
              )
         return CurrentUser(user_id=payload["sub"], role=payload.get("role", "reader"))
+
+
+def get_current_user(
+          user:CurrentUser=Depends(_get_current_user)  # noqa: B008
+          ) -> CurrentUser:
+     return user
