@@ -51,5 +51,5 @@ class BusinessLogicError(Exception):
         super().__init__(detail)
         self.detail = detail
 
-        
-# ─── Handlers ─────────────────────────────────────────────────────────────────
+
+# ─── Handlers | Starlette  ─────────────────────────────────────────────────────────────────
