@@ -90,3 +90,31 @@ def decode_token(token: str, settings: Settings) -> dict[str, Any]:
         ) from exc
 
 # ─── FastAPI Dependencies ────────────────────────────────────────────────────
+# - Minimal parsed token payload injected into routes. (Carga útil mínima del token analizado inyectada en las rutas)  # noqa: E501
+
+class CurrentUser: 
+    """
+        Minimal parsed token payload injected into routes. (Carga útil mínima del token analizado inyectada en las rutas)
+    """  # noqa: E501
+    def __init__(self, user_id:str, role:str) -> None:
+        self.user_id = user_id
+        self.role = role
+
+
+def _get_current_user(
+        credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),  # noqa: B008
+        settings: Settings = Depends(get_setting),  # noqa: B008
+) -> CurrentUser:
+        if not credentials:
+                raise HTTPException(
+                     status_code=status.HTTP_401_UNAUTHORIZED, 
+                     detail= "Credenciales Inválidas o han expirado | Tiempo del Token expiró",
+                     headers={"WWW-Authenticate": "Bearer"},
+                )
+        payload = decode_token(credentials.credentials, settings)
+        if payload.get("kind") != "access":
+             raise HTTPException(
+                  status_code=status.HTTP_401_UNAUTHORIZED, 
+                  detail="Token Inválido - Se requiere access token",
+             )
+        return CurrentUser(user_id=payload["sub"], role=payload.get("role", "reader"))
