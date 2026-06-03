@@ -126,7 +126,15 @@ class Tournaments(Base):
 
 class Match(Base): 
   __tablename__ = "matches"
-  pass
+  
+  match_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  tournament_id: Mapped[int] = mapped_column(
+    Integer, ForeignKey("tournaments.tournament_id", ondelete=="RESTRICT"), nullable=False
+  )
+  year: Mapped[int] = mapped_column(SmallInteger, nullable=False, index=True)
+  stage: Mapped[int] = mapped_column(String(50), nullable=False)
+  match_datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+  stadium: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
 
 class PlayerAppearance(Base): 
