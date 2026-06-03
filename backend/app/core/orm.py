@@ -63,3 +63,66 @@ class User(Base):
 
   def __rep__(self) -> str: 
     return f"<User {self.display_name} - {self.email}  | role={self.role}"
+
+
+class Team(Base): 
+  __tablename__ = "teams"
+
+  team_id: Mapped[int] = mapped_column(
+    Integer, primary_key=True, autoincrement=True
+  )
+  initials: Mapped[str] = mapped_column(
+    String(3), unique=True, nullable=False, index=True
+  )
+  name: Mapped[str] = mapped_column(
+    String(100), nullable=False
+  )
+  confederation: Mapped[str | None] = mapped_column(
+    String(20), nullable=True
+  )
+  fifa_code: Mapped[str | None] = mapped_column(
+    String(3), nullable=True
+  )
+  active: Mapped[bool] = mapped_column(
+    Boolean, nullable=False, default=True
+  )
+  home_matches: Mapped[list[Match]] = relationship (
+    "Match", foreign_keys="Match.home_team_initials", back_populates="home_team"
+  )
+  away_matches: Mapped[list[Match]] = relationship (
+    "Match", foreign_keys="Match.away_team_initials", back_populates="away_team"
+  )
+
+  def __rep__(self) -> str: 
+    return f"<Team {self.initials}"
+  
+
+class Tournaments(Base): 
+  __tablename__ = "tournaments"
+  __table_args__ = (UniqueConstraint("year", name="uq_tournament_year"), )
+  pass
+
+
+class Match(Base): 
+  __tablename__ = "matches"
+  pass
+
+
+class PlayerAppearance(Base): 
+  __tablename__ = "player_appearance"
+  pass
+
+
+class EtlRun(Base):
+  __tablename__ = "etl_runs"
+  pass
+
+
+class DeadLetter(Base): 
+  __tablename__ = "dead_letters"
+  pass
+
+
+class AuditLog(Base): 
+  __tablename__ = "audit_logs"
+  pass
