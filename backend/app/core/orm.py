@@ -102,7 +102,27 @@ class Tournaments(Base):
   __table_args__ = (UniqueConstraint("year", name="uq_tournament_year"), )
   
   tournament_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+  year: Mapped[int] = mapped_column(SmallInteger, nullable=False, index=True)
+  host_country: Mapped[str] = mapped_column(String(100), nullable=False)
+  winner: Mapped[str] = mapped_column(String(100), nullable=False)
+  runners_up: Mapped[str] = mapped_column(String(100), nullable=False)
+  third_place: Mapped[str | None] = mapped_column(String(100), nullable=True)
+  fourth_place: Mapped[str | None] = mapped_column(String(100), nullable=True)
+  goals_scored: Mapped[int] = mapped_column(Integer, nullable=False)
+  qualified_teams: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+  matches_played: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+  attendance_total: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
+  matches: Mapped[list[Match]] = relationship("Match", back_populates="tournament")
+
+  @property
+  def svg_goals_per_match(self) -> float | None: 
+    if self.matches_played: 
+      return round(self.goals_scored / self.matches_played, 2)
+    return None
+  
+  def __rep__(self) -> str: 
+      return f"<Tournament Year: {self.year} | Winner: {self.winner}"
 
 class Match(Base): 
   __tablename__ = "matches"
