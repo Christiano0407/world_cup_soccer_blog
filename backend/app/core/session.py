@@ -2,7 +2,18 @@
   Async database engine, session factory, and dependency injection.
   (Motor de base de datos asíncrono, fábrica de sesiones e inyección de dependencias.)
     - Sesiones & Conexion entre: DB & API - FastAPI
-"""
+####################### ============================================ #######################
+  En una arquitectura profesional de FastAPI, este archivo suele considerarse la capa de infraestructura de persistencia, porque centraliza:
+
+    - Creación del AsyncEngine.
+    - Gestión del pool de conexiones.
+    - Creación de AsyncSession.
+    - Dependency Injection (get_db).
+    - Transacciones (commit / rollback).
+    - Ciclo de vida (lifespan).
+    - Soporte para testing (NullPool).
+    
+"""  # noqa: E501
 
 from __future__ import annotations
 
@@ -51,7 +62,7 @@ def get_sessions_factory(settings: Settings | None = None) -> async_sessionmaker
       engine, 
       class_=AsyncSession, 
       expire_on_commit=False,
-      autoflush=False, 
+      autoflush=False, # tú controlas cuándo se envía.
       autocommit=False
     )
   return _session_factory
@@ -65,6 +76,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     Yield an async DB session; automatically rolls back on error. 
       - "yield se utiliza en el sistema de inyección de dependencias para crear dependencias con generadores 
         que permiten ejecutar código tanto antes como después de la petición."
+      -  Antes de Yield: Session Creada | Después de Yield: Limpieza
   """  # noqa: E501
   factory = get_sessions_factory()
   async with factory() as session:
@@ -76,7 +88,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
       raise 
 
 
-#// ─── Test helpers ─────────────────────────────────────────────────────────────
+#? ─── Test helpers ─────────────────────────────────────────────────────────────
 
 def create_test_engine(db_url: str) -> AsyncEngine:
   """ Create a single-connection engine suitable for tests (NullPool). """
