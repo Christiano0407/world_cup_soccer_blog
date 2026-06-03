@@ -100,7 +100,8 @@ class Team(Base):
 class Tournaments(Base): 
   __tablename__ = "tournaments"
   __table_args__ = (UniqueConstraint("year", name="uq_tournament_year"), )
-  pass
+  
+  tournament_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
 
 class Match(Base): 
