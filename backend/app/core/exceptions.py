@@ -53,3 +53,31 @@ class BusinessLogicError(Exception):
 
 
 # ─── Handlers | Starlette  ─────────────────────────────────────────────────────────────────
+
+def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(
+        request: Request, exc: StarletteHTTPException
+    ) -> JSONResponse:
+        return JSONResponse (
+            status_code=exc.status_code, 
+            content={"detail": exc.detail},
+        )
+    
+    @app.exception_handler(RequestValidationError) 
+    async def validator_exception_handler(
+            request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, 
+            content={"detail": exc.errors()}
+        )
+    
+    @app.exception_handler(NotFoundError)
+    async def not_found_handler(
+        request: Request, exc: NotFoundError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            content={"detail": str(exc)}
+        )
