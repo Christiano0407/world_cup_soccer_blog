@@ -21,7 +21,7 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-# ─── Domain Exceptions ────────────────────────────────────────────────────────
+#! ─── Domain Exceptions ────────────────────────────────────────────────────────
 class NotFoundError(Exception): 
     def __init__(self, resource: str = "Recurso") -> None:
         self.resource = resource
@@ -52,7 +52,7 @@ class BusinessLogicError(Exception):
         self.detail = detail
 
 
-# ─── Handlers | Starlette  ─────────────────────────────────────────────────────────────────
+#? ─── Handlers | Starlette  ─────────────────────────────────────────────────────────────────
 
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)

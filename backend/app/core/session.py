@@ -26,10 +26,12 @@ logger = get_logger(__name__)
 _engina: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 
-# ─── FastAPI Engine | Async with Db - Postgres ──────────────────────────────────────────────
-
-# ─── FastAPI dependency ───────────────────────────────────────────────────────
+#! ─── FastAPI Engine & Sessions | Async with Db - Postgres ──────────────────────────────────────────  # noqa: E501
 
 
 
-# ─── Test helpers ─────────────────────────────────────────────────────────────
+#? ─── FastAPI dependency ───────────────────────────────────────────────────────
+
+
+
+#// ─── Test helpers ─────────────────────────────────────────────────────────────

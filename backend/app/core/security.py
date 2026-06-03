@@ -33,7 +33,7 @@ def verify_password(plain:str, hashed:str) -> bool:
     return _pwd_context.verify(plain, hashed)
 
 
-# ─── JWT (JSON Web Token) ────────────────────────────────────────────────────────────────
+#! ─── JWT (JSON Web Token) ────────────────────────────────────────────────────────────────
  
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -89,7 +89,7 @@ def decode_token(token: str, settings: Settings) -> dict[str, Any]:
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
-# ─── FastAPI Dependencies ────────────────────────────────────────────────────
+#? ─── FastAPI Dependencies ────────────────────────────────────────────────────
 # - Minimal parsed token payload injected into routes. (Carga útil mínima del token analizado inyectada en las rutas)  # noqa: E501
 
 class CurrentUser: 
