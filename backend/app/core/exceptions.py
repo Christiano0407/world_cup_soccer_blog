@@ -70,7 +70,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     ) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, 
-            content={"detail": exc.errors()}
+            content={"detail": exc.errors()},
         )
     
     @app.exception_handler(NotFoundError)
@@ -79,7 +79,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     ) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND, 
-            content={"detail": str(exc)}
+            content={"detail": str(exc)},
         )
     
     @app.exception_handler(ConflictError)
@@ -88,7 +88,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     ) -> JSONResponse: 
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT, 
-            content={"detail": exc.detail}
+            content={"detail": exc.detail},
         )
     
     @app.exception_handler(AuthenticationError)
@@ -107,5 +107,30 @@ def register_exception_handlers(app: FastAPI) -> None:
     ) -> JSONResponse: 
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN, 
-            content={"detail": exc.detail}
+            content={"detail": exc.detail},
+        )
+    
+    @app.exception_handler(BusinessLogicError)
+    async def business_error_handler(
+        request: Request, exc: BusinessLogicError
+    ) -> JSONResponse: 
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            content={"detail": exc.detail},
+        )
+    
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
+        logger.error (
+            "unhandled_exception", 
+            path=request.url.path, 
+            method=request.method, 
+            error=str(exc), 
+            exc_info=True,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            content={"detail": "Error Interno del Servidor | Internal Server Error"},
         )
