@@ -99,7 +99,7 @@ async def lifespan_db(settings: Settings):  # noqa: ANN201
   """ Called by app lifespan — connects and verifies DB. """
   engine = get_engine(settings)
   async with engine.connect() as conn:
-    await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
+    await conn.execute(__import__("sqlalchemy").text("SELECT 1")) # SQLAlchemy puede comunicarse con PostgreSQL | TCP | Válidas credenciales  # noqa: E501
   logger.info("database_connected", url=settings.db_url_str.split("@")[-1])
   yield 
   await engine.dispose()
