@@ -60,6 +60,35 @@ def get_sessions_factory(settings: Settings | None = None) -> async_sessionmaker
 
 #? ─── FastAPI dependency ───────────────────────────────────────────────────────
 
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+  """ 
+    Yield an async DB session; automatically rolls back on error. 
+      - "yield se utiliza en el sistema de inyección de dependencias para crear dependencias con generadores 
+        que permiten ejecutar código tanto antes como después de la petición."
+  """  # noqa: E501
+  factory = get_sessions_factory()
+  async with factory() as session:
+    try: 
+      yield session
+      await session.commit()
+    except Exception:
+      await session.rollback()
+      raise 
 
 
 #// ─── Test helpers ─────────────────────────────────────────────────────────────
+
+def create_test_engine(db_url: str) -> AsyncEngine:
+  """ Create a single-connection engine suitable for tests (NullPool). """
+  return create_async_engine(db_url, poolclass=NullPool, echo=True)
+
+@asynccontextmanager
+async def lifespan_db(settings: Settings):  # noqa: ANN201
+  """ Called by app lifespan — connects and verifies DB. """
+  engine = get_engine(settings)
+  async with engine.connect() as conn:
+    await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
+  logger.info("database_connected", url=settings.db_url_str.split("@")[-1])
+  yield 
+  await engine.dispose()
+  logger.info("database_disconnected")
