@@ -210,7 +210,14 @@ class EtlRun(Base):
 
 class DeadLetter(Base): 
   __tablename__ = "dead_letters"
-  pass
+  dl_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+  source_table: Mapped[str] = mapped_column(String(50), nullable=False)
+  source_row_id: Mapped[int] = mapped_column(Integer, nullable=False)
+  error_code: Mapped[str] = mapped_column(String(50), nullable=False)
+  error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+  rejected_at: Mapped[datetime] = mapped_column(
+      DateTime(timezone=True), server_default=func.now()
+  )
 
 
 class AuditLog(Base): 
