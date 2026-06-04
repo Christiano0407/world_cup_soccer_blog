@@ -129,17 +129,55 @@ class Match(Base):
   
   match_id: Mapped[int] = mapped_column(Integer, primary_key=True)
   tournament_id: Mapped[int] = mapped_column(
-    Integer, ForeignKey("tournaments.tournament_id", ondelete=="RESTRICT"), nullable=False
+    Integer, ForeignKey("tournaments.tournament_id", ondelete="RESTRICT"), nullable=False
   )
   year: Mapped[int] = mapped_column(SmallInteger, nullable=False, index=True)
   stage: Mapped[int] = mapped_column(String(50), nullable=False)
   match_datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
   stadium: Mapped[str | None] = mapped_column(String(100), nullable=True)
+  city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+  home_team_initials: Mapped[str] = mapped_column(
+    String(3), ForeignKey("teams.initials", ondelete="RESTRICT"), nullable=False
+  )
+  away_team_initials: Mapped[str] = mapped_column(
+    String(3), ForeignKey("teams.initials", ondelete="RESTRICT"), nullable=False
+  )
+  home_goals: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+  away_goals: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+  ht_home_goals: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+  ht_away_goals: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+  win_conditions: Mapped[str | None] = mapped_column(String(50), nullable=True)
+  attendance: Mapped[int | None] = mapped_column(Integer, nullable=True)
+  referee: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+  tournament: Mapped[Tournaments] = relationship("Tournaments", back_populates="matches")
+  home_team: Mapped[Team] = relationship(
+    "Team", foreign_keys=[home_team_initials], back_populates="home_matches"
+  )
+  away_team: Mapped[Team] = relationship(
+    "Team", foreign_keys=[away_team_initials], back_populates="away_matches"
+  )
+  player_appearances: Mapped[list[PlayerAppearance]] = relationship(
+    "PlayerAppearance", back_populates="matches"
+  )
+
+  def __repr__(self) -> str:
+    return f"<Match {self.year} {self.home_team_initials} Vs {self.away_team_initials}>"
 
 
 class PlayerAppearance(Base): 
   __tablename__ = "player_appearance"
-  pass
+  
+  player_match_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+  match_id: Mapped[int] = mapped_column(
+    Integer, ForeignKey("Matches.match_id", ondelete="CASCADE"), nullable=False, 
+    index=True
+  )
+  team_initials: Mapped[str] = mapped_column(String(3), nullable=False)
+  coach_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+  lineup_type: Mapped[str] = mapped_column(
+    Enum("S", "N", name="lineup_type"), nullable=False, comment="S=titular, N=suplente"
+  )
 
 
 class EtlRun(Base):
