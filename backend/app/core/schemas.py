@@ -131,8 +131,47 @@ class TournamentUpdate(BaseModel):
   goals_scored: int | None = Field(default=None, ge=0)
   attendance_total: int | None = None
 
-# ─── Teams ────────────────────────────────────────────────────────────────────
 
+# ─── Teams ────────────────────────────────────────────────────────────────────
+class TeamOut(BaseModel):
+  model_config = ConfigDict(from_attributes=True)
+  
+  team_id: int
+  initials: str
+  name: str
+  confederation: str | None = None
+  fifa_code: str | None = None
+  active: bool
+
+
+class TeamStatsOut(BaseModel):
+    initials: str
+    name: str
+    confederation: str | None = None
+    tournaments_played: int = 0
+    titles: int = 0
+    runner_ups: int = 0
+    total_matches: int = 0
+    wins: int = 0
+    draws: int = 0
+    losses: int = 0
+    goals_scored: int = 0
+    goals_conceded: int = 0
+    goal_difference: int = 0
+    win_rate_pct: float = 0.0
+ 
+ 
+class TeamIn(BaseModel):
+    initials: str = Field(min_length=2, max_length=3)
+    name: str = Field(max_length=100)
+    confederation: str | None = None
+    active: bool = True
+ 
+ 
+class TeamUpdate(BaseModel):
+    name: str | None = Field(default=None, max_length=100)
+    confederation: str | None = None
+    active: bool | None = None
 
 # ─── Matches ─────────────────────────────────────────────────────────────────
 
