@@ -189,12 +189,24 @@ class PlayerAppearance(Base):
   match: Mapped[Match] = relationship("Match", back_populates="player_appearances")
 
   def __repr__(self) -> str:
-    return f"<PlayerAppearances {self.player_name} | match={self.match_id}"
+    return f"<PlayerAppearances {self.player_name} | match={self.match_id}>"
 
 
 class EtlRun(Base):
   __tablename__ = "etl_runs"
-  pass
+  
+  run_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+  dataset: Mapped[str] = mapped_column(String(20), nullable=False)
+  worker: Mapped[str | None] = mapped_column(String(50), nullable=True)
+  status: Mapped[str] = mapped_column(
+      Enum("running", "success", "failed", "partial", name="etl_status"), nullable=False
+  )
+  started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+  finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+  rows_loaded: Mapped[int | None] = mapped_column(Integer, nullable=True)
+  rows_rejected: Mapped[int | None] = mapped_column(Integer, nullable=True)
+  duration_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+  triggered_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class DeadLetter(Base): 
