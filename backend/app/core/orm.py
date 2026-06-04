@@ -3,6 +3,10 @@
   (Object Relational Mapping o Mapeo Objeto-Relacional) 
     - Su función principal es convertir los datos de los objetos en el lenguaje de programación a un formato adecuado para ser almacenado en una base de datos relacional (como MySQL o PostgreSQL).
     - [POO & DB] Técnica de programación que crea una capa de abstracción entre el código orientado a objetos y las bases de datos relacionales. 
+  # ===================================================== #
+  - "SQLAlchemy ORM es el sistema de mapeo objeto-relacional (ORM) de 
+    Python que permite interactuar con bases de datos relacionales utilizando clases y objetos de Python 
+    en lugar de escribir consultas SQL crudas"
 """  # noqa: E501
 
 from __future__ import annotations
