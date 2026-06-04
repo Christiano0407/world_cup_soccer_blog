@@ -4,6 +4,10 @@
   - "Pydantic es la biblioteca de validación de datos más popular en Python, diseñada para 
     validar, convertir y serializar datos estructurados utilizando las anotaciones de tipo (type hints)
      nativas del lenguaje."
+  # =============================================== #
+    - " En Pydantic v2, model_config = ConfigDict(from_attributes=True) es una configuración que permite a
+      los modelos validar y construir instancias a partir de objetos Python (como modelos ORM) en lugar 
+      de únicamente diccionarios "
 """  # noqa: E501
 
 from __future__ import annotations
@@ -174,9 +178,80 @@ class TeamUpdate(BaseModel):
     active: bool | None = None
 
 # ─── Matches ─────────────────────────────────────────────────────────────────
-
+class MatchOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+ 
+    match_id: int
+    tournament_id: int
+    year: int
+    stage: str
+    match_datetime: datetime
+    stadium: str | None = None
+    city: str | None = None
+    home_team_initials: str
+    away_team_initials: str
+    home_team_name: str | None = None
+    away_team_name: str | None = None
+    home_goals: int
+    away_goals: int
+    ht_home_goals: int | None = None
+    ht_away_goals: int | None = None
+    win_conditions: str | None = None
+    attendance: int | None = None
+    referee: str | None = None
+ 
+ 
+class MatchListOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+ 
+    match_id: int
+    year: int
+    stage: str
+    match_datetime: datetime
+    home_team_initials: str
+    away_team_initials: str
+    home_goals: int
+    away_goals: int
+ 
  
 # ─── Players ─────────────────────────────────────────────────────────────────
+
+class PlayerAppearanceOut(BaseModel): 
+  model_config = ConfigDict(from_attributes=True)
+
+  player_match_id: int
+  match_id: int
+  team_initials: str
+  coach_name: str | None = None
+  lineup_type: Literal["S", "N"]
+  shirt_number: int | None = None
+  player_name: str
+  position: Literal["GK", "DF", "MF", "FW"] | None = None
+  event_code: str | None = None
+
+
+class TopScorerOut(BaseModel):
+    player_name: str
+    team_initials: str
+    goals: int
+    own_goals: int = 0
+    matches_played: int
+    first_wc: int
+    last_wc: int
+    editions: int
+ 
+ 
+class PlayerCareerOut(BaseModel):
+    player_name: str
+    team_initials: str
+    total_appearances: int
+    starts: int
+    substitutions: int
+    goals: int
+    yellow_cards: int
+    red_cards: int
+    editions: list[int]
+
 
 
 # ─── Admin ────────────────────────────────────────────────────────────────────
