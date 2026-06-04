@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime  # noqa: F401
 
 from sqlalchemy import (
   BigInteger,
@@ -222,4 +222,10 @@ class DeadLetter(Base):
 
 class AuditLog(Base): 
   __tablename__ = "audit_logs"
-  pass
+  
+  log_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+  schema_name: Mapped[str] = mapped_column(String(50), nullable=False, default="public")
+  table_name: Mapped[str] = mapped_column(String(100), nullable=False)
+  operation: Mapped[str] = mapped_column(Enum("I", "U", "D", name="audit_operation"), nullable=False)  # noqa: E501
+  changed_by: Mapped[str] = mapped_column(String(255), nullable=False)
+  changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
