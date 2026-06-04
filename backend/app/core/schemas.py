@@ -277,3 +277,29 @@ class AdminUserUpdate(BaseModel):
 class EtlTriggerIn(BaseModel): 
    dataset: Literal["all", "winners", "matches", "players"] = "all" # Define Types
  
+
+class EtlStatusOut(BaseModel):
+   model_config = ConfigDict(from_attributes=True) # Connect To ORM - DB
+
+   run_id: int | None = None
+   dataset: str | None = None
+   worker: str | None = None
+   status: Literal["running", "success", "failed", "partial"] # Define Types
+   started_at: datetime | None = None
+   finished_at: datetime | None = None
+   rows_loaded: int | None = None
+   rows_rejected: int | None = None
+   duration_s: float | None = None
+   triggered_by: str | None = None
+
+
+ 
+class DeadLetterOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+ 
+    dl_id: int
+    source_table: str
+    source_row_id: int
+    error_code: str
+    error_detail: str | None = None
+    rejected_at: datetime
