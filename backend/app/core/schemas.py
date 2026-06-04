@@ -68,7 +68,8 @@ class LoginIn(BaseModel):
 
 
 class UserOut(BaseModel):
-  model_config = ConfigDict(from_attributes=True)
+  model_config = ConfigDict(from_attributes=True) # Connect To ORM
+
   user_id: uuid.UUID
   email: EmailStr
   display_name: str | None = None
@@ -89,7 +90,7 @@ class ChangePasswordIn(BaseModel):
 # ─── Tournaments ──────────────────────────────────────────────────────────────
 
 class TournamentOut(BaseModel):
-  model_config = ConfigDict(from_attributes=True)
+  model_config = ConfigDict(from_attributes=True) # Connect To ORM
 
   tournament_id: int
   year: int
@@ -106,7 +107,7 @@ class TournamentOut(BaseModel):
 
 
 class TournamentListOut(BaseModel): 
-  model_config = ConfigDict(from_attributes=True)
+  model_config = ConfigDict(from_attributes=True) # Connect To ORM
 
   tournament_id: int
   year: int
@@ -138,7 +139,7 @@ class TournamentUpdate(BaseModel):
 
 # ─── Teams ────────────────────────────────────────────────────────────────────
 class TeamOut(BaseModel):
-  model_config = ConfigDict(from_attributes=True)
+  model_config = ConfigDict(from_attributes=True) # Connect To ORM
   
   team_id: int
   initials: str
@@ -179,7 +180,7 @@ class TeamUpdate(BaseModel):
 
 # ─── Matches ─────────────────────────────────────────────────────────────────
 class MatchOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True) # Connect To ORM
  
     match_id: int
     tournament_id: int
@@ -202,7 +203,7 @@ class MatchOut(BaseModel):
  
  
 class MatchListOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True) # Connect To ORM
  
     match_id: int
     year: int
@@ -217,7 +218,7 @@ class MatchListOut(BaseModel):
 # ─── Players ─────────────────────────────────────────────────────────────────
 
 class PlayerAppearanceOut(BaseModel): 
-  model_config = ConfigDict(from_attributes=True)
+  model_config = ConfigDict(from_attributes=True) # Connect To ORM
 
   player_match_id: int
   match_id: int
@@ -255,4 +256,24 @@ class PlayerCareerOut(BaseModel):
 
 
 # ─── Admin ────────────────────────────────────────────────────────────────────
+
+class AdminUserOut(BaseModel): 
+   model_config = ConfigDict(from_attributes=True) # Connect To ORM
+
+   user_id: uuid.UUID
+   email: EmailStr
+   display_name: str | None = None
+   role: Literal["admin", "editor", "reader"] # Define Types
+   is_active: bool
+   created_at: datetime
+   update_at: datetime
+
+
+class AdminUserUpdate(BaseModel):
+   role: Literal["admin", "editor", "reader" ] # Define Types
+   is_active: bool | None = None
+
+
+class EtlTriggerIn(BaseModel): 
+   dataset: Literal["all", "winners", "matches", "players"] = "all" # Define Types
  
