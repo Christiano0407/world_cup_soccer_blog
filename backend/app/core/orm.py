@@ -178,6 +178,18 @@ class PlayerAppearance(Base):
   lineup_type: Mapped[str] = mapped_column(
     Enum("S", "N", name="lineup_type"), nullable=False, comment="S=titular, N=suplente"
   )
+  shirt_number: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+  player_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+  position: Mapped[str | None] = mapped_column(
+    Enum("GK", "DF","MF", "FW", name="position_type"), nullable=True
+  )
+  event_code: Mapped[str | None] = mapped_column(
+    String(5), nullable=True, comment="G=gol, y=Amarilla, r=Roja, OG=propia",
+  )
+  match: Mapped[Match] = relationship("Match", back_populates="player_appearances")
+
+  def __repr__(self) -> str:
+    return f"<PlayerAppearances {self.player_name} | match={self.match_id}"
 
 
 class EtlRun(Base):
