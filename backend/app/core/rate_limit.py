@@ -1,8 +1,16 @@
 """
   Rate limiting middleware — Redis sliding window counter.
     - [Middleware limitador de velocidad — contador de ventana deslizante Redis.]
+    - Límite de Peticiones (Request) (¿Cuántas veces ha llamado?)
+      - Fuerza bruta sobre login.
+      - Ataques de bots.
+      - Scraping masivo.
+      - DDoS básicos.
+      - Consumo excesivo de recursos.
   # =================
     - "Es un framework/toolkit ASGI ligero y de alto rendimiento para Python, diseñado específicamente para construir aplicaciones web asíncronas y servicios API." | Es la base sobre la que se construye FastAPI
+  # =================
+    - RATE_LIMIT_AUTH & PUBLIC [Este middleware es una implementación profesional de Rate Limiting usando Redis + Sliding Window, algo muy común en APIs públicas]
 """  # noqa: E501
 
 from __future__ import annotations
