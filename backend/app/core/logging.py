@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import logging
 import sys
- 
+
 import structlog
 
 
+#! ==== Configure Logging ==== ----------------------------------------------------------------------------  # noqa: E501
 def configure_logging(log_level: str = "INFO", environment:str="development") -> None:
   """
     Configure structlog for JSON (prod) or pretty console (dev) output 
@@ -59,3 +60,4 @@ def configure_logging(log_level: str = "INFO", environment:str="development") ->
 ## === See Logging - History | Event - streaming === 
 def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
   return structlog.get_logger(name)
+
