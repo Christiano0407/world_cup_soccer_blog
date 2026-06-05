@@ -38,7 +38,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
   def __init__(self, app, redis_client: aioredis.Redis) -> None: # type: ignore[type-arg]  # noqa: ANN001
     super().__init__(app)
     self._redis = redis_client
-    self._settings = get_setting
+    self._settings = get_setting()
 
   async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
     
@@ -66,7 +66,6 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
     pipe.zadd(key, {str(now) + f":{time.monotonic_ns()}": now}) # Agrega Peticiones Actuales | Redis las almacena  # noqa: E501
     pipe.zcard(key)       # Cuenta elementos (Num Login/register...etc)
     pipe.expire(key, 61)  # 60 Seg / min Expira
-    results = await pipe.execute()
     results = await pipe.execute() 
 
     count: int = results[2] # Va con zcard
