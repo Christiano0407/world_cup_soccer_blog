@@ -41,44 +41,48 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
     self._settings = get_setting
 
   async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-    path = request.url.path
+    
+    path = request.url.path 
+    # [/api/v1/auth/login o /api/v1/products]
 
     # === Determina el Límite (Limit) === #
+    # = ¿Es endpoint Auth? (Determinar el Límite ) = #
     if any(path.startswith(p) for p in _AUTH_PREFIXES):
             limit = self._settings.RATE_LIMIT_AUTH
     else:
-        limit = self._settings.RATE_LIMIT_PUBLIC
+        limit = self._settings.RATE_LIMIT_PUBLIC # Limit 100
 
     # === Key per IP + path-bucket === #
     client_ip = request.client.host if request.client else "unknown"
     bucket = "auth" if any(path.startswith(p) for p in _AUTH_PREFIXES) else "public"
-    key = f"ratelimiting:{client_ip}:{bucket}"
+    key = f"rl:{client_ip}:{bucket}"
+    # key = rl:201.145.100.1:auth & Redis Almacena [rl:201.145.100.1:auth]
 
-    now = int(time.time())
-    window_start = now - 60 # 1-minute sliding window
+    now = int(time.time())  # Tiempo actual u Horario
+    window_start = now - 60 # 1-minute (60 seconds) sliding window (desliza continuamente.)
 
-    pipe = self._redis.pipeline()
-    pipe.zremrangebyscore(key, 0, window_start)
-    pipe.zadd(key, {str(now) + f":{time.monotonic_ns()}": now})
-    pipe.zcard(key)
-    pipe.expire(key, 61)
+    pipe = self._redis.pipeline() # [Agrupa Comandos (4 Redis / request)]
+    pipe.zremrangebyscore(key, 0, window_start) # Elimina Registros Viejos (Peticiones Viejas)
+    pipe.zadd(key, {str(now) + f":{time.monotonic_ns()}": now}) # Agrega Peticiones Actuales | Redis las almacena  # noqa: E501
+    pipe.zcard(key)       # Cuenta elementos (Num Login/register...etc)
+    pipe.expire(key, 61)  # 60 Seg / min Expira
     results = await pipe.execute()
     results = await pipe.execute() 
 
-    count: int = results[2]
+    count: int = results[2] # Va con zcard
 
     if count > limit:
             return JSONResponse(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS, # - Código estándar para Rate Limiting.-  # noqa: E501
                 content={"detail": "Demasiadas solicitudes. Intente en un momento."},
                 headers={
-                    "X-RateLimit-Limit": str(limit),
-                    "X-RateLimit-Remaining": "0",
-                    "Retry-After": "60",
+                    "X-RateLimit-Limit": str(limit),  # - Tu límite de request
+                    "X-RateLimit-Remaining": "0",     # - Te dice Cuántas te quedan...(request)?
+                    "Retry-After": "60",              # - Espera 60 segundos (otra request)
                 },
             )
     
-    response = await call_next(request)
+    response = await call_next(request) # Si no excede el límite > continúa hacia FastAPI (API)
     response.headers["X-RateLimit-Limit"] = str(limit)
     response.headers["X-RateLimit-Remaining"] = str(max(0, limit - count))
     return response

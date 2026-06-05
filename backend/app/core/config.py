@@ -58,8 +58,8 @@ class Settings(BaseSettings):
   CORS_ALLOW_CREDENTIALS: bool = True
 
   #! === Rate Limiting (Límite de 'Request' / Peticiones) === #
-  RATE_LIMIT_PUBLIC: int = 30  # req/min
-  RATE_LIMIT_AUT: int = 10 # req/min
+  RATE_LIMIT_PUBLIC: int = 60  # req/min
+  RATE_LIMIT_AUTH: int = 10 # req/min
 
   #* === DB: MinIO / Storage s3 === # 
   STORAGE_ENDPOINT: str = "localhost:9000"
