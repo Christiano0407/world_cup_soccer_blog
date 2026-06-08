@@ -150,3 +150,17 @@ class AuthService:
         access_token=access_token,
         expires_in=self._settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60, # Seconds
       )
+  
+  # ==== REFRESH (User) | 'Actualizar el Token & Ver si ha sido Revocado' ====
+  
+  
+  # ==== LOGOUT (User) | 'Salirme | Revoked el Access' ====
+
+  
+  # === Get Me (User) | 'Obtener mis datos de Acceso' ===
+  
+  
+  # === Update Me (User) | 'Actualizar mis Datos' ===
+
+
+  # === Change Password (User) | 'Actualizar mis Datos - Cambiar mi contraseña' ===
