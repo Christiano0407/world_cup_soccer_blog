@@ -22,6 +22,24 @@
           Devolver resultados
   ## ============================================================================== ##
   - Utilizamos Métodos Privados: (_)
+  ## ============================================================================== ## 
+  Los datos dentro del payload se organizan en pares clave-valor llamados claims.  
+  Existen tres tipos principales:
+
+    ' Claims registrados (Registered claims): Son un conjunto de campos predefinidos por el estándar (RFC 7519) que se recomiendan para asegurar la interoperabilidad. No son obligatorios, pero muy comunes:
+    - iss (Issuer): Identifica quién emitió el token.
+    - sub (Subject): Identifica al usuario o entidad principal.
+    - aud (Audience): Define para quién es válido el token (ej. una API específica).
+    - exp (Expiration time): Marca temporal después de la cual el token no debe ser aceptado.
+    - nbf (Not Before): Marca temporal antes de la cual el token no debe ser aceptado.
+    - iat (Issued At): Indica cuándo fue creado el token.
+    - jti (JWT ID): Identificador único del token. 
+    
+    Claims públicos (Public claims): Son definidos por la comunidad y registrados en el IANA JSON Web Token Registry para evitar colisiones de nombres. Suelen usar nombres cortos para ahorrar espacio. 
+    
+    Claims privados (Private claims): Son personalizados y acordados entre las partes que utilizan el token para compartir información específica de la aplicación que no está estandarizada (ej. user_role, department_id)'.
+
+  ## ============================================================================== ##
 """  # noqa: E501
 
 from __future__ import annotations
@@ -145,13 +163,24 @@ class AuthService:
     access_token = create_access_token(str(user.user_id), user.role, self._settings)
     refresh_token = create_refresh_token(str(user.user_id), self._settings)
     _set_refresh_cookies(response, refresh_token, self._settings)
-
+    
+    # Type: Bearer
     return TokenOut(
         access_token=access_token,
         expires_in=self._settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60, # Seconds
       )
   
   # ==== REFRESH (User) | 'Actualizar el Token & Ver si ha sido Revocado' ====
+  async def refresh(self, payload:dict, response: Response) -> TokenOut:
+    """
+      'El payload es la segunda parte de un Token JWT (JSON Web Token) que contiene la 
+        información real o datos que se transmiten entre las partes, estructurados como pares clave-valor conocidos como claims.'
+      # ==== #
+      'Al escribir user_id: str = payload["sub"], estás extrayendo la identidad única del usuario desde el token JWT.' [El campo sub (abreviatura de subject o "sujeto"]
+    """  # noqa: E501
+    pass
+
+    return TokenOut()
   
   
   # ==== LOGOUT (User) | 'Salirme | Revoked el Access' ====
