@@ -23,6 +23,9 @@
 - [Test Architecture](#test-architecture)
 - [Troubleshooting — Errores Conocidos](#troubleshooting--errores-conocidos)
 - [Project Structure](#project-structure)
+- [Backend API — FastAPI](#backend-api--fastapi)
+- [Implementation Status](#implementation-status)
+- [Roadmap](#roadmap)
 - [Licencia](#licencia)
 
 ---
@@ -563,21 +566,64 @@ if match_dt is None:
 
 ```
 .
-├── backend/                    # FastAPI REST API
-├── workers/                    # ETL Pipeline
+├── backend/                        # FastAPI REST API
+│   ├── app/
+│   │   ├── api/v1/endpoints/       # Route handlers (stubs)
+│   │   │   ├── auth.py
+│   │   │   ├── health.py
+│   │   │   ├── teams.py
+│   │   │   ├── tournaments.py
+│   │   │   ├── matches.py
+│   │   │   ├── players.py
+│   │   │   ├── analytics.py
+│   │   │   └── admin.py
+│   │   ├── core/                   # Config + security + errors
+│   │   │   ├── config.py           # Pydantic Settings
+│   │   │   ├── security.py         # JWT, hashing, auth deps
+│   │   │   ├── exceptions.py       # Domain exceptions + handlers
+│   │   │   └── logging.py          # structlog setup
+│   │   ├── db/
+│   │   │   └── session.py          # Async engine + session factory
+│   │   ├── middleware/
+│   │   │   ├── rate_limit.py       # Redis sliding-window rate limiter
+│   │   │   └── logging.py          # Request ID + structured access logs
+│   │   ├── models/
+│   │   │   └── orm.py              # SQLAlchemy ORM models
+│   │   ├── schemas/
+│   │   │   └── schemas.py          # Pydantic v2 request/response schemas
+│   │   ├── services/               # Business logic layer
+│   │   │   ├── auth.py             # (pending)
+│   │   │   ├── domain.py           # (pending)
+│   │   │   └── admin.py            # (pending)
+│   │   └── main.py                 # FastAPI entry point (pending)
+│   ├── openapi/                    # OpenAPI 3.1 spec
+│   │   ├── openapi.yaml
+│   │   ├── components/schemas/
+│   │   └── paths/
+│   ├── scripts/
+│   │   ├── seed.py                 # (pending)
+│   │   └── etl.py                  # (pending)
+│   ├── tests/
+│   │   ├── unit/                   # (pending)
+│   │   ├── integration/            # (pending)
+│   │   └── e2e/                    # (pending)
+│   ├── pyproject.toml
+│   └── Dockerfile                  # (pending)
+│
+├── workers/                        # ETL Pipeline
 │   ├── pyproject.toml
 │   ├── Dockerfile
 │   ├── src/worker/
 │   │   ├── cli.py
 │   │   ├── core/
-│   │   │   ├── config.py       # Settings (pydantic-settings)
+│   │   │   ├── config.py
 │   │   │   ├── db.py
-│   │   │   └── storage.py      # MinIO client wrapper
-│   │   ├── ingestion/          # W1
+│   │   │   └── storage.py
+│   │   ├── ingestion/              # W1
 │   │   │   └── ingest_w1.py
-│   │   ├── cleaning/           # W2
+│   │   ├── cleaning/               # W2
 │   │   │   └── clean_w2.py
-│   │   ├── loading/            # W3
+│   │   ├── loading/                # W3
 │   │   │   └── load_w3.py
 │   │   ├── validators/
 │   │   │   ├── rules.py
@@ -587,32 +633,212 @@ if match_dt is None:
 │   │       └── helpers.py
 │   └── tests/
 │       ├── unit/
-│       │   ├── test_helpers.py
-│       │   ├── test_rules.py
-│       │   ├── test_schemas.py
-│       │   └── test_cli.py
-│       └── integration/
-│           ├── conftest.py
-│           ├── test_w1_ingest.py
-│           ├── test_w2_clean.py
-│           └── test_w3_load.py
+│       ├── integration/
+│       └── conftest.py
+│
 ├── frontend/
-├── db/
-│   ├── migrations/             # 000 → 010
+├── db/                             # Database infrastructure (SQL)
+│   ├── migrations/                 # 000 → 010 SQL migrations
 │   ├── dml/
-│   │   └── dml_complete.sql
+│   │   ├── dml_complete.sql
+│   │   └── seeds/
+│   ├── postgres-sql/
+│   │   └── init.sql
 │   └── scripts/
 │       ├── run_migrations.sh
 │       └── run_dml.sh
 ├── data/
-│   ├── raw/                    # CSVs originales
+│   ├── raw/                        # CSVs originales
 │   ├── processed/
 │   └── samples/
 ├── infra/
 │   └── nginx/
+│       ├── Dockerfile
+│       ├── nginx.conf
+│       └── conf.d/api-gateway.conf
 ├── docker-compose.yml
+├── .env.example
 └── README.md
 ```
+
+---
+
+## Backend API — FastAPI
+
+La API REST del backend está diseñada bajo **FastAPI** con arquitectura modular en capas. Sirve datos históricos de la Copa Mundial de la FIFA y gestiona autenticación (JWT), rate limiting (Redis), logging estructurado, y telemetría.
+
+### Arquitectura
+
+```
+Request ──▶ nginx (proxy) ──▶ FastAPI ──▶ Middleware ──▶ Router ──▶ Service ──▶ DB/Redis
+                                 │
+                                 ├─ RequestLoggingMiddleware  (request ID + log)
+                                 ├─ RateLimitingMiddleware     (Redis sliding window)
+                                 └─ CORSMiddleware             (CORS config)
+```
+
+### Endpoints Previstos
+
+| Método | Ruta                    | Descripción                      | Auth     |
+|--------|-------------------------|----------------------------------|----------|
+| GET    | `/api/health`           | Health check + component status  | Público  |
+| POST   | `/api/v1/auth/register` | Crear cuenta                     | Público  |
+| POST   | `/api/v1/auth/login`    | Iniciar sesión (JWT + cookie)    | Público  |
+| POST   | `/api/v1/auth/refresh`  | Refrescar access token           | Cookie   |
+| POST   | `/api/v1/auth/logout`   | Cerrar sesión                    | Bearer   |
+| GET    | `/api/v1/auth/me`       | Perfil del usuario actual        | Bearer   |
+| GET    | `/api/v1/teams`         | Listar equipos                   | Público  |
+| GET    | `/api/v1/teams/{id}`    | Detalle de equipo + estadísticas | Público  |
+| GET    | `/api/v1/tournaments`   | Listar torneos                   | Público  |
+| GET    | `/api/v1/tournaments/{id}` | Detalle de torneo             | Público  |
+| GET    | `/api/v1/matches`       | Listar partidos (filtros)        | Público  |
+| GET    | `/api/v1/matches/{id}`  | Detalle de partido               | Público  |
+| GET    | `/api/v1/players`       | Listar jugadores / goleadores    | Público  |
+| GET    | `/api/v1/players/{name}`| Estadísticas de carrera          | Público  |
+| GET    | `/api/v1/analytics`     | Dashboard de estadísticas        | Público  |
+| GET    | `/api/v1/admin/users`   | Listar usuarios                  | Admin    |
+| PATCH  | `/api/v1/admin/users/{id}` | Actualizar rol/estado         | Admin    |
+| POST   | `/api/v1/admin/etl/trigger` | Disparar pipeline ETL       | Admin    |
+| GET    | `/api/v1/admin/etl/status`  | Estado del ETL              | Admin    |
+
+> **Nota:** Los endpoints están definidos en la especificación OpenAPI en `backend/openapi/openapi.yaml`. Los route handlers están pendientes de implementar.
+
+### Capas del Backend
+
+| Capa | Ubicación | Responsabilidad |
+|------|-----------|-----------------|
+| **Routes** | `app/api/v1/endpoints/*.py` | Handlers HTTP, validación de input, respuestas |
+| **Services** | `app/services/*.py` | Lógica de negocio, orquestación de DB/Redis |
+| **Middleware** | `app/middleware/*.py` | Rate limiting, logging de requests, CORS |
+| **Core** | `app/core/*.py` | Config, seguridad, excepciones, logging setup |
+| **DB** | `app/db/session.py` | Engine asíncrono, session factory, dependency |
+| **Models** | `app/models/orm.py` | ORM (SQLAlchemy) — 9 modelos |
+| **Schemas** | `app/schemas/schemas.py` | Pydantic v2 — 18+ schemas |
+
+### Stack del Backend
+
+| Tecnología | Versión | Propósito |
+|------------|---------|-----------|
+| FastAPI | ≥ 0.115 | Framework ASGI |
+| SQLAlchemy | ≥ 2.0 | ORM asíncrono |
+| asyncpg | ≥ 0.29 | Driver PostgreSQL |
+| Redis (aioredis) | ≥ 2.0 | Caché + rate limiting |
+| python-jose | ≥ 3.3 | JWT encode/decode |
+| passlib[argon2] | ≥ 1.7 | Password hashing |
+| structlog | ≥ 24.1 | Logging estructurado |
+| pydantic v2 | ≥ 2.6 | Validación de datos |
+| Alembic | ≥ 1.13 | Migraciones (pendiente) |
+| Celery | ≥ 5.6 | Tareas async (pendiente) |
+
+---
+
+## Implementation Status
+
+Estado actual de cada componente del backend:
+
+### Core Infrastructure (✅ Completado)
+
+| Componente | Archivo | Estado |
+|------------|---------|--------|
+| Config (Settings) | `app/core/config.py` | ✅ Implementado |
+| Security (JWT + hashing) | `app/core/security.py` | ✅ Implementado |
+| Exceptions + handlers | `app/core/exceptions.py` | ✅ Implementado |
+| Logging setup | `app/core/logging.py` | ✅ Implementado |
+| DB Session | `app/db/session.py` | ✅ Implementado |
+| ORM Models | `app/models/orm.py` | ✅ 9 modelos |
+| Pydantic Schemas | `app/schemas/schemas.py` | ✅ 18+ schemas |
+| Rate Limiting | `app/middleware/rate_limit.py` | ✅ Redis sliding window |
+| Request Logging | `app/middleware/logging.py` | ✅ Request ID + log |
+
+### OpenAPI Spec (✅ Completado)
+
+| Archivo | Estado |
+|---------|--------|
+| `backend/openapi/openapi.yaml` | ✅ 344 líneas, todos los endpoints |
+| Component schemas (YAML) | ✅ 7 archivos (admin, auth, matches, players, shared, teams, tournaments) |
+| Path definitions | ✅ 7 archivos |
+
+### Pending Implementation (🔴 Por Implementar)
+
+| Componente | Prioridad | Archivo(s) |
+|------------|-----------|------------|
+| App entry point (`main.py`) | **Crítica** | `app/main.py` |
+| Auth endpoints | **Crítica** | `app/api/v1/endpoints/auth.py` |
+| Health endpoint | **Crítica** | `app/api/v1/endpoints/health.py` |
+| Teams endpoints | **Alta** | `app/api/v1/endpoints/teams.py` |
+| Tournaments endpoints | **Alta** | `app/api/v1/endpoints/tournaments.py` |
+| Matches endpoints | **Alta** | `app/api/v1/endpoints/matches.py` |
+| Players endpoints | **Alta** | `app/api/v1/endpoints/players.py` |
+| Analytics endpoints | **Alta** | `app/api/v1/endpoints/analytics.py` |
+| Admin endpoints | **Alta** | `app/api/v1/endpoints/admin.py` |
+| Auth service | **Alta** | `app/services/auth.py` |
+| Domain service | **Alta** | `app/services/domain.py` |
+| Admin service | **Alta** | `app/services/admin.py` |
+| `__init__.py` exports | **Alta** | Todos los `__init__.py` |
+| Dockerfile | **Media** | `backend/Dockerfile` |
+| `docker-compose.yml` — backend service | **Media** | `docker-compose.yml` |
+| `alembic.ini` + migrations | **Media** | `alembic.ini` |
+| `scripts/seed.py` | **Media** | `backend/scripts/seed.py` |
+| `scripts/etl.py` | **Media** | `backend/scripts/etl.py` |
+| Unit tests | **Alta** | `backend/tests/unit/` |
+| Integration tests | **Alta** | `backend/tests/integration/` |
+| E2E tests | **Media** | `backend/tests/e2e/` |
+| CI/CD workflows | **Media** | `.github/workflows/` |
+
+### Workers ETL (✅ Completado)
+
+| Componente | Estado |
+|------------|--------|
+| W1 — Ingest (`ingest_w1.py`) | ✅ Completo |
+| W2 — Clean (`clean_w2.py`) | ✅ Completo |
+| W3 — Load (`load_w3.py`) | ✅ Completo |
+| Validators (`rules.py`, `schemas.py`) | ✅ Completo |
+| Utilities (`helpers.py`, `constants.py`) | ✅ Completo |
+| CLI (`cli.py`) | ✅ Completo |
+| Unit tests (147 tests) | ✅ 77% coverage |
+| Integration tests | ✅ Completos |
+
+---
+
+## Roadmap
+
+### Fase 1 — MVP (CORE) 🎯
+- [x] Infraestructura Docker (PostgreSQL, MinIO, nginx)
+- [x] Pipeline ETL completo (W1 → W2 → W3)
+- [x] Migraciones SQL (000 → 010)
+- [x] Especificación OpenAPI completa
+- [x] Core backend (config, security, DB session, ORM, schemas, middleware)
+
+### Fase 2 — API REST ⏳
+- [ ] `main.py` — App FastAPI + registro de routers/middleware/exception handlers
+- [ ] Endpoints de Health + Auth (register, login, refresh, logout, me)
+- [ ] Endpoints de Teams, Tournaments, Matches, Players
+- [ ] Endpoints de Analytics
+- [ ] Endpoints de Admin (CRUD usuarios, trigger ETL)
+- [ ] Servicios (auth, domain, admin)
+- [ ] `__init__.py` con exports
+
+### Fase 3 — Infraestructura 🏗️
+- [ ] Dockerfile para backend
+- [ ] Servicio backend en `docker-compose.yml`
+- [ ] Alembic para migraciones desde Python
+- [ ] Scripts `seed.py` y `etl.py`
+- [ ] `.env.example` completo para backend
+
+### Fase 4 — Calidad y CI/CD 🧪
+- [ ] Tests unitarios del backend
+- [ ] Tests de integración del backend
+- [ ] Tests E2E
+- [ ] GitHub Actions (lint + test + build)
+- [ ] Docker Compose healthchecks completos
+
+### Fase 5 — Producción 🚀
+- [ ] HTTPS / TLS (certbot / Let's Encrypt)
+- [ ] Rate limiting con Redis (ya implementado, falta registro en app)
+- [ ] OpenTelemetry / Prometheus metrics
+- [ ] CSRF protection
+- [ ] Backups automatizados de DB
+- [ ] Logs centralizados
 
 ---
 
