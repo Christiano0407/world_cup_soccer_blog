@@ -67,6 +67,13 @@ class LoginIn(BaseModel):
   password: str
 
 
+class TokenOut(BaseModel):
+  access_token: str
+  token_type: str = "bearer"  # noqa: S105
+  expires_in: int = Field(description="Segundos")
+
+
+
 class UserOut(BaseModel):
   model_config = ConfigDict(from_attributes=True) # Connect To ORM
 
