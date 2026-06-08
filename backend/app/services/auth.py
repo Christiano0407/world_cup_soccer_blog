@@ -36,26 +36,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.exceptions import AuthenticationError, BusinessLogicError, ConflictError
-
 from app.core.security import (
-  create_access_token, 
-  create_refresh_token, 
-  hash_password, 
-  verify_password, 
+  create_access_token,
+  create_refresh_token,
+  hash_password,
+  verify_password,
 )
-
 from app.models.orm import User
-
 from app.schemas.schemas import (
-  ChangePasswordIn, 
-  LoginIn, 
-  RegisterIn, 
-  TopScorerOut, 
-  UserOut, 
+  ChangePasswordIn,
+  LoginIn,
+  RegisterIn,
+  TokenOut,
+  TopScorerOut,
+  UserOut,
   UserUpdateIn,
-  TokenOut
 )
-
 
 
 # === Refresh Tokens | Cookies === --------------------------------------------------
@@ -91,7 +87,8 @@ class AuthService:
     self._db = db
     self._settings = settings
     self._redis = redis
-
+  
+  # === Get USER by Email ===
   async def _get_user_by_email(self, email: str) -> User | None: 
     '''
       scalar_one_or_none() es un método del sistema de resultados de SQLAlchemy ORM/Core,
@@ -100,6 +97,7 @@ class AuthService:
     result = await self._db.execute(select(User).where(User.email == email))
     return result.scalar_one_or_none()
   
+  # === Get User By ID ===
   async def _get_user_by_id(self, user_id: str) -> User:
     result = await self._db.execute(select(User).where(User.user_id == uuid.UUID(user_id)))
     user = result.scalar_one_or_none()
@@ -107,6 +105,7 @@ class AuthService:
       raise AuthenticationError("Usuario No encontrado | Vuelve a Autenticar tu Usuario")
     return user
   
+  # ==== Register (User) | 'Crear una cuenta Nueva. Un nuevo Registro' ====
   async def register(self, data_register:RegisterIn, response:Response) -> TokenOut:
     existing = await self._get_user_by_email(data_register.email)
 
@@ -129,6 +128,25 @@ class AuthService:
     
     # Type: Bearer
     return TokenOut(
-      access_token=access, 
-      expires_in=self._settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        access_token=access, 
+        expires_in=self._settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60, # Seconds
+      )
+  
+  # ==== LOGIN (User) | 'Ya existe una Cuenta del Usuario' ====
+  async def login(self, data_login: LoginIn, response: Response) -> TokenOut:
+    user = await self._get_user_by_email(data_login.email)
+
+    if not user or not verify_password(data_login.password, user.hashed_password):
+      raise AuthenticationError("Credenciales Inválidas o han expirado")
+    
+    if not user.is_active: 
+      raise AuthenticationError("Cuenta Desactivada | Activa tu cuenta o Vuelve a activarla")
+    
+    access_token = create_access_token(str(user.user_id), user.role, self._settings)
+    refresh_token = create_refresh_token(str(user.user_id), self._settings)
+    _set_refresh_cookies(response, refresh_token, self._settings)
+
+    return TokenOut(
+        access_token=access_token,
+        expires_in=self._settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60, # Seconds
       )
