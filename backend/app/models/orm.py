@@ -7,6 +7,15 @@
   - "SQLAlchemy ORM es el sistema de mapeo objeto-relacional (ORM) de 
     Python que permite interactuar con bases de datos relacionales utilizando clases y objetos de Python 
     en lugar de escribir consultas SQL crudas"
+  # ====================================================== # 
+    - SQL & ORM | SQLAlchemy:
+        SELECT *
+        FROM users
+        WHERE email = ?
+    - Equivalente:
+        result = await self._db.execute(
+              select(User).where(User.email == email)
+              )
 """  # noqa: E501
 
 from __future__ import annotations
