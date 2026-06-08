@@ -36,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.exceptions import AuthenticationError, BusinessLogicError, ConflictError
+
 from app.core.security import (
   create_access_token, 
   create_refresh_token, 
@@ -44,6 +45,7 @@ from app.core.security import (
 )
 
 from app.models.orm import User
+
 from app.schemas.schemas import (
   ChangePasswordIn, 
   LoginIn, 
@@ -81,4 +83,18 @@ def _clear_refresh_cookies(response: Response, settings: Settings) -> None:
   )
 
 
-# === Authentication Service [Logic, Routes & Roles To the Business] === -------------------------
+# === [POO] Authentication Service [Logic, Routes & Roles To the Business] === ---------------------
+# ---- Utilizamos Métodos Privados: (_) ----
+class AuthService:
+  def __init__(self, db:AsyncSession, settings: Settings, redis: aioredis.Redis) -> None:
+    self._db = db
+    self._settings = settings
+    self._redis = redis
+
+  async def _get_user_by_email(self, email: str) -> User | None: 
+    '''
+      scalar_one_or_none() es un método del sistema de resultados de SQLAlchemy ORM/Core,
+      no de FastAPI ni de PostgreSQL
+    '''
+    result = await self._db.execute(select(User).where(User.email == email))
+    return result.scalar_one_or_none()
