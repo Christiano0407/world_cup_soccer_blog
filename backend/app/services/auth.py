@@ -52,3 +52,33 @@ from app.schemas.schemas import (
   UserOut, 
   UserUpdateIn
 )
+
+
+
+# === Refresh Tokens | Cookies === --------------------------------------------------
+def _set_refresh_cookies(response: Response, token: str, settings: Settings) -> None:
+  """ 
+    Cookie: 'Se guarda en el Navegador'
+      - Redis no almacena la Cookie. | 
+      - Redis almacena información relacionada con el token.
+  """ 
+  response.set_cookie(
+    key=settings.REFRESH_COOKIES_NAME,
+    value=token,
+    httponly=settings.REFRESH_COOKIE_HTTPONLY, 
+    secure=settings.REFRESH_COOKIE_SECURE, 
+    samesite=settings.REFRESH_COOKIE_SAMESITE, 
+    path=settings.REFRESH_COOKIE_PATH, 
+    max_age=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+  )
+
+
+# === Clear Refresh Tokens | Cookies === --------------------------------------------------
+def _clear_refresh_cookies(response: Response, settings: Settings) -> None:
+  response.delete_cookie(
+    key=settings.REFRESH_COOKIES_NAME, 
+    path=settings.REFRESH_COOKIE_PATH,
+  )
+
+
+# === Authentication Service [Logic, Routes & Roles To the Business] === -------------------------
