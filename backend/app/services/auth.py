@@ -217,6 +217,9 @@ class AuthService:
 
   
   # === Get Me (User) | 'Obtener mis datos de Acceso' ===
+  async def get_me(self, user_id:str) -> UserOut:
+    user = await self._get_user_by_id(user_id)
+    return UserOut.model_validate(user)
   
   
   # === Update Me (User) | 'Actualizar mis Datos' ===
