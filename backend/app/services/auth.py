@@ -174,7 +174,8 @@ class AuthService:
   async def refresh(self, payload:dict, response: Response) -> TokenOut:
     """
       'El payload es la segunda parte de un Token JWT (JSON Web Token) que contiene la 
-        información real o datos que se transmiten entre las partes, estructurados como pares clave-valor conocidos como claims.'
+        información real o datos que se transmiten entre las partes, estructurados 
+        como pares clave-valor conocidos como claims.'
       # ==== #
       'Al escribir user_id: str = payload["sub"], estás extrayendo la identidad única del usuario desde el token JWT.' [El campo sub (abreviatura de subject o "sujeto"]
     """  # noqa: E501
@@ -208,6 +209,11 @@ class AuthService:
   
   
   # ==== LOGOUT (User) | 'Salirme | Revoked el Access' ====
+  async def logout(self, user_id:str, bearer_jti:str | None, response: Response) -> None:
+    if bearer_jti: 
+      ttl = self._settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 60
+      await self._redis.setex(f"revoked_refresh{bearer_jti}", ttl, "1" )
+    _clear_refresh_cookies(response, self._settings)
 
   
   # === Get Me (User) | 'Obtener mis datos de Acceso' ===
