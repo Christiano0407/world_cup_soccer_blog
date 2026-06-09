@@ -109,3 +109,29 @@ class TeamService:
       goal_difference=goals_scored - goals_conceded, 
       win_rate_pct=round((wins/total * 100), 2) if total else 0.0
     )
+
+  async def get_ranking(
+      self,
+      sort_by: str = "titles", 
+      min_matches: int = 5
+  ) -> list[TeamStatsOut]:
+    pass
+
+  async def create_team(self, data: TeamIn) -> TeamOut:
+    pass
+
+  async def update_team(self, initials: str, data: TeamUpdate) -> TeamOut: 
+    pass
+
+  async def get_matches(
+      self, 
+      initials: str, 
+      page: int = 1, 
+      page_size: int = 20,
+      year: int | None = None, 
+      stage: str | None = None, 
+  ) -> Paginated[MatchListOut]:
+    pass
+
+  async def head_to_head(self, initials_a:str, initials_b:str) -> HeadToHeadOut: 
+    pass
