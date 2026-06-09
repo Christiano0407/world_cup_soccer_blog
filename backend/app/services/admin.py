@@ -1,0 +1,1 @@
+"""Admin service — user management, ETL pipeline, warehouse, audit log."""

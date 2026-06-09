@@ -261,6 +261,89 @@ class PlayerCareerOut(BaseModel):
     editions: list[int]
 
 
+# ─── Analytics ────────────────────────────────────────────────────────────────
+ 
+ 
+class GoalsPerEditionPoint(BaseModel):
+    year: int
+    host_country: str
+    winner: str
+    goals_scored: int
+    matches_played: int
+    avg_goals_per_match: float
+    attendance_total: int | None = None
+    avg_attendance_per_match: int | None = None
+ 
+ 
+class TeamPerformancePoint(BaseModel):
+    initials: str
+    team_name: str
+    tournaments_played: int
+    titles: int
+    total_matches: int
+    wins: int
+    draws: int
+    losses: int
+    goals_scored: int
+    goals_conceded: int
+ 
+ 
+class GoalsByStagePoint(BaseModel):
+    stage: str
+    year: int | None = None
+    matches: int
+    total_goals: int
+    avg_goals: float
+    home_wins: int
+    away_wins: int
+    draws: int
+    avg_attendance: int | None = None
+ 
+ 
+class AttendanceTrendPoint(BaseModel):
+    year: int
+    host_country: str
+    qualified_teams: int
+    matches_played: int
+    avg_attendance: int | None = None
+    max_attendance: int | None = None
+ 
+ 
+class ChoroplethPoint(BaseModel):
+    iso3: str
+    team_name: str
+    titles: int
+    wins: int
+    total_matches: int
+ 
+ 
+class HalftimePoint(BaseModel):
+    ht_diff: int
+    ft_diff: int
+    result_changed: bool
+ 
+ 
+class PositionPoint(BaseModel):
+    position: Literal["GK", "DF", "MF", "FW"]
+    appearances: int
+    starts: int
+    starter_pct: float
+ 
+ 
+class HeadToHeadOut(BaseModel):
+    team_a: str
+    team_b: str
+    total_matches: int
+    team_a_wins: int
+    team_b_wins: int
+    draws: int
+    team_a_goals: int
+    team_b_goals: int
+    first_encounter: int
+    last_encounter: int
+ 
+
+
 
 # ─── Admin ────────────────────────────────────────────────────────────────────
 
