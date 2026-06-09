@@ -223,7 +223,7 @@ class AuthService:
   
   
   # === Update Me (User) | 'Actualizar mis Datos' ===
-  async def update_me(self, user_id: str, data_update: UserUpdateIn) -> UserOut:
+  async def update_me(self, user_id:str, data_update:UserUpdateIn) -> UserOut:
     user = await self._get_user_by_id(user_id)
     if data_update.display_name is not None:
       user.display_name = data_update.display_name
@@ -232,3 +232,9 @@ class AuthService:
 
 
   # === Change Password (User) | 'Actualizar mis Datos - Cambiar mi contraseña' ===
+  async def change_password(self, user_id:str, data_password:ChangePasswordIn) -> None: 
+    user = await self._get_user_by_id(user_id)
+    if not verify_password(data_password.current_password, user.hashed_password):
+      raise BusinessLogicError("Contraseña (Actual) es Incorrecta | Verifica tu contraseña")
+    user.hashed_password = hash_password(data_password.new_password)
+    user.update_at = datetime.now(UTC)
