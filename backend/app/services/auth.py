@@ -223,6 +223,12 @@ class AuthService:
   
   
   # === Update Me (User) | 'Actualizar mis Datos' ===
+  async def update_me(self, user_id: str, data_update: UserUpdateIn) -> UserOut:
+    user = await self._get_user_by_id(user_id)
+    if data_update.display_name is not None:
+      user.display_name = data_update.display_name
+    user.update_at = datetime.now(UTC)
+    return UserOut.model_validate(user)
 
 
   # === Change Password (User) | 'Actualizar mis Datos - Cambiar mi contraseña' ===
