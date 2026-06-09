@@ -178,9 +178,33 @@ class AuthService:
       # ==== #
       'Al escribir user_id: str = payload["sub"], estás extrayendo la identidad única del usuario desde el token JWT.' [El campo sub (abreviatura de subject o "sujeto"]
     """  # noqa: E501
-    pass
+    user_id: str = payload["sub"]
+    jti: str = payload["jti"]
 
-    return TokenOut()
+    # [Caché] - Check if refresh Has been revoked (Checkar si el Token | Refresh ha sido rechazado)
+    revoked = await self._redis.get(f"revoked_refresh:{jti}")
+    if revoked: 
+      raise AuthenticationError("Refresh Token Revocado | Vuelve a Autenticarte para tu nuevo Token")  # noqa: E501
+    
+    # User
+    user = await self._get_user_by_id(user_id)
+    if user.is_active:
+      raise AuthenticationError("Cuenta Inactiva u Desactivada | Vuelve a activar tu cuenta")
+    
+    # Rotate: Revoke Old Jti (token) 
+    # - el contexto del código que proporcionaste, que implementa una lista de revocación (blacklist) para tokens JWT usando Redis - #  # noqa: E501
+    ttl = self._settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 86400 # número de segundos en un día
+    await self._redis.setex(f"revoked_refresh:{jti}", ttl, "1") # valor del dato (payload) que se almacena en Redis.  # noqa: E501
+
+    access_token = create_access_token(str(user.user_id), user.role, self._settings)
+    refresh = create_refresh_token(str(user.user_id), self._settings)
+    _set_refresh_cookies(response, refresh, self._settings)
+    
+    # Type: Bearer
+    return TokenOut(
+      access_token=access_token, 
+      expires_in=self._settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 60
+    )
   
   
   # ==== LOGOUT (User) | 'Salirme | Revoked el Access' ====
