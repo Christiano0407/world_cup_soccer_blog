@@ -50,6 +50,7 @@ class TeamService:
     # = Es el error típico de SQLAlchemy — scalar() = un valor, scalars() = varios valores.#
     return [TeamOut.model_validate(t) for t in result_team.scalars()]
 
+  # === [GET | Private] === #
   async def _get_team(self, initials:str) -> Team:
     result_query = await self._db.execute(
       select(Team).where(func.upper(Team.initials == initials.upper()))
@@ -110,6 +111,7 @@ class TeamService:
       win_rate_pct=round((wins/total * 100), 2) if total else 0.0
     )
 
+  # === [GET] === #
   async def get_ranking(
       self,
       sort_by: str = "titles", 
@@ -138,7 +140,7 @@ class TeamService:
 
     return sorted(stats, key=key_map.get(sort_by, lambda s:s.titles), reverse=True)
 
-  # === Create a new Team / Selección === #
+  # === [CRUD] - Create a new Team / Selección === #
   async def create_team(self, data_team: TeamIn) -> TeamOut:
     existing_team = await self._db.execute(
       select(Team).where(func.upper(Team.initials) == data_team.initials.upper())
@@ -150,9 +152,13 @@ class TeamService:
     await self._db.flush() 
     return TeamOut.model_validate(team)
   
+  # === [CRUD] - Update === #
+  async def update_team(self, initials: str, data_update: TeamUpdate) -> TeamOut:
+    team = await self._get_team(initials)
+    for field, value in data_update.model_dump(exclude_none=True).items(): # Considera: Scalar_one_none...(_get_team)  # noqa: E501
+      setattr(team, field, value)
+    return TeamOut.model_validate(team)
 
-  async def update_team(self, initials: str, data: TeamUpdate) -> TeamOut: 
-    pass
 
   async def get_matches(
       self, 
@@ -162,7 +168,31 @@ class TeamService:
       year: int | None = None, 
       stage: str | None = None, 
   ) -> Paginated[MatchListOut]:
-    pass
+    
+    await self._get_team(initials)
+
+    query = select(Match).where(
+      or_(
+        Match.home_team_initials == initials.upper(),
+        Match.away_team_initials == initials.upper(),
+      )
+    )
+
+    if year: 
+      query = query.where(Match.year == year)
+    if stage: 
+      query = query.where(Match.stage == stage)
+
+    total = (await self._db.execute(select(func.count()).select_from(query.subquery()))).scalar()
+    q = query.order_by(Match.match_datetime.desc())
+    q = query.offset((page - 1) * page_size) # Calling Division
+    result = await self._db.execute(q)
+
+    items = [MatchListOut.model_validate(m) for m in result.scalars()]
+    pages = -(-total // page_size) # Ceiling Division
+    return Paginated(items = items, total=total, page=page, page_size=page_size ,pages=pages)
+
+
 
   async def head_to_head(self, initials_a:str, initials_b:str) -> HeadToHeadOut: 
     pass
