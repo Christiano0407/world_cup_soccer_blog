@@ -183,9 +183,9 @@ class TeamService:
     if stage: 
       query = query.where(Match.stage == stage)
 
-    total = (await self._db.execute(select(func.count()).select_from(query.subquery()))).scalar()
+    total = (await self._db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0  # noqa: E501
     q = query.order_by(Match.match_datetime.desc())
-    q = query.offset((page - 1) * page_size) # Calling Division
+    q = q.offset((page - 1) * page_size).limit(page_size)
     result = await self._db.execute(q)
 
     items = [MatchListOut.model_validate(m) for m in result.scalars()]
