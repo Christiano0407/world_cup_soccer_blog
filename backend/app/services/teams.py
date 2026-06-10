@@ -195,4 +195,58 @@ class TeamService:
 
 
   async def head_to_head(self, initials_a:str, initials_b:str) -> HeadToHeadOut: 
-    pass
+    """ Confrontar & Comparar entre Selecciones | SQL:Todos los Parámetros (HeadToHeadOut)"""
+    await self._get_team(initials_a)
+    await self._get_team(initials_b)
+    # = SQL/Postgres = #
+    query = text(
+      """
+        SELECT 
+          COUNT(*)                                                  AS total_matches,
+          MIN(year)                                                 AS first_encounter, 
+          MAX(year)                                                 AS last_encounter, 
+          COUNT(
+            CASE WHEN 
+              (home_team_initials = :a AND home_goals > away_goals) 
+              OR 
+              (away_team_initials = :a AND away_goals > home_goals)
+              THEN 1 END
+              )                                                     AS team_a_wins,
+          COUNT(
+            CASE WHEN
+              (home_team_initials = :b AND home_goals > away_goals)
+              OR 
+              (away_team_initials = :b AND away_goals > home_goals)
+              THEN 1 END
+              )                                                     AS team_b_wins,
+          COUNT(CASE WHEN home_goals = away_goals THEN 1 END)       AS draws,
+          SUM(CASE WHEN home_team_initials :a 
+              THEN home_goals ELSE away_goals END
+          )                                                         AS team_a_goals,
+          SUM(CASE WHEN away_team_initials :b
+            THEN away_goals  ELSE home_goals  
+          )                                                         AS team_b_goals,
+
+          FROM matches 
+          WHERE 
+            (home_team_initials = :a AND away_team_initials :b)
+            OR 
+            (home_team_initials = :b AND away_team_initials :b)
+      """
+    )
+    # = Filas = #
+    row = (await self._db.execute(query, {"a": initials_a.upper(), "b": initials_b.upper()})).one()  # noqa: F841
+
+    return HeadToHeadOut(
+      team_a=initials_a.upper(), 
+      team_b=initials_b.upper(),
+      total_matches=row.total_matches or 0,  
+      team_a_wins=row.team_a_wins or 0,
+      team_b_wins=row.team_b_wins or 0,
+      draws=row.draw or 0, 
+      team_a_goals=row.team_a_goals or 0, 
+      team_b_goals=row.team_b_goals or 0, 
+      first_encounter=row.first_encounter or 0,
+      last_encounter=row.last_encounter or 0,
+    )
+
