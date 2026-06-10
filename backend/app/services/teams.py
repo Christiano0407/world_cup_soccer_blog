@@ -115,10 +115,41 @@ class TeamService:
       sort_by: str = "titles", 
       min_matches: int = 5
   ) -> list[TeamStatsOut]:
-    pass
+    
+    result = await self._db.execute(select(Team).where(Team.active == True))  # noqa: E712
+    teams = result.scalars().all()  # noqa: F841
 
-  async def create_team(self, data: TeamIn) -> TeamOut:
-    pass
+    stats = [] # List / Matriz / Array  # noqa: F841
+
+    for team in teams:
+      try:
+        s = await self.get_team_stats(team.initials)
+        if s.total_matches >= min_matches:
+          stats.append(s)
+      except NotFoundError:
+        continue
+
+    key_map = {
+      "titles":lambda s:s.titles,
+      "wins":lambda s:s.wins,
+      "goals_scored":lambda s:s.goals_scored,
+      "total_matches":lambda s:s.total_matches,
+    }
+
+    return sorted(stats, key=key_map.get(sort_by, lambda s:s.titles), reverse=True)
+
+  # === Create a new Team / Selección === #
+  async def create_team(self, data_team: TeamIn) -> TeamOut:
+    existing_team = await self._db.execute(
+      select(Team).where(func.upper(Team.initials) == data_team.initials.upper())
+    )
+    if existing_team.scalar_one_or_none():
+      raise ConflictError(f"El Team(Selección): {data_team.initials} ya existe (Ya tiene un lugar dentro del Torneo Mundial de fútbol)")  # noqa: E501
+    team = Team(**data_team.model_dump())
+    self._db.add(team)
+    await self._db.flush() 
+    return TeamOut.model_validate(team)
+  
 
   async def update_team(self, initials: str, data: TeamUpdate) -> TeamOut: 
     pass
