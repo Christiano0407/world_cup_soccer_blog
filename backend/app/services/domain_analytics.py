@@ -1,7 +1,5 @@
 """Tournaments, Matches, Players, and Analytics services."""
 
-"""Tournaments, Matches, Players, and Analytics services."""
-
 from __future__ import annotations
 
 from sqlalchemy import func, or_, select, text
