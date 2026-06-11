@@ -85,13 +85,15 @@ from app.schemas.schemas import (
 class AdminService: 
   def __init__(self, db:AsyncSession) -> None:
     self._db = db 
-
+  
+  # ---- List de Usuarios (Access | Permisos) ----
   async def list_user(
       self, page:int = 1, page_size:int = 20, 
       role: str | None = None, is_active:bool | None = None
       ) -> Paginated[AdminUserOut]:  # type: ignore
     pass
-
+  
+  # === Obtener User Privado ===
   async def _get_user(
       self, user_id:str
       ) -> User: # type: ignore
@@ -107,4 +109,45 @@ class AdminService:
       data_update_user: AdminUserUpdate
       ) -> AdminUserOut: # type: ignore
     pass
+
+  async def soft_delete_user(
+    self, user_Id:str  # noqa: N803
+    ) -> None:
+    pass
   
+  # ==== Workers - ETL & Data | Functions ====
+  async def trigger_etl(
+      self, data:EtlTriggerIn, 
+      triggered_by:str
+      ) -> dict: # type: ignore
+    pass
+
+  async def get_etl_status(
+      self, dataset:str | None = None
+  ) -> EtlStatusOut: # type: ignore
+    pass
+  
+  async def get_dead_letters(
+      self, 
+      page: int = 1,
+      page_size: int = 20, 
+      dataset:str | None = None, 
+      error_code: str | None = None
+  ) -> Paginated[DeadLetterOut]: # type: ignore
+    pass
+
+  # = ---- Warehouse Data ---- #
+  async def refresh_warehouse(
+      self
+  ) -> dict: # type: ignore
+    pass
+
+  # === ---- Log (Logging / History) ---- === #
+  async def get_audit_log(
+      self, 
+      page: int = 1, 
+      page_size: int = 20, 
+      table_name: str | None = None,
+      operation: str | None = None
+  ) -> dict: # type: ignore
+    pass
