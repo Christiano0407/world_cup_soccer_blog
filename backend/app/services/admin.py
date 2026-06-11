@@ -91,28 +91,57 @@ class AdminService:
       self, page:int = 1, page_size:int = 20, 
       role: str | None = None, is_active:bool | None = None
       ) -> Paginated[AdminUserOut]:  # type: ignore
+    """
+      - Construye una consulta base: select(User).
+      - Aplica filtros opcionales por rol y estado.
+      - Ordena por fecha de creación descendente.
+      - Calcula el total de registros para paginación.
+      - Aplica OFFSET y LIMIT.
+      - Convierte los modelos ORM a DTOs (AdminUserOut).
+    """
     pass
   
-  # === Obtener User Privado ===
+  # === Obtener User Privado(Method) ===
   async def _get_user(
       self, user_id:str
       ) -> User: # type: ignore
+    """
+      - Busca un usuario por UUID.
+          Si no existe, lanza NotFoundError, que normalmente termina en un 404 Not Found
+    """
     pass
 
   async def get_user(
       self, user_id:str
   ) -> AdminUserOut: # type: ignore
+    """
+      - Devuelve un único usuario usando el método privado anterior y lo transforma a AdminUserOut.
+    """
     pass
 
   async def update_user(
       self, user_id:str, 
       data_update_user: AdminUserUpdate
       ) -> AdminUserOut: # type: ignore
+    """
+      - Reglas de negocio:
+          Permite cambiar el rol.
+          Permite activar/desactivar la cuenta.
+          Actualiza updated_at.
+    """
     pass
 
   async def soft_delete_user(
     self, user_Id:str  # noqa: N803
     ) -> None:
+    """
+      No elimina físicamente el registro.
+        - Ventajas del soft delete
+        - Conserva historial.
+        - Permite auditoría.
+        - Evita romper referencias.
+        - Permite restaurar usuarios.
+    """
     pass
   
   # ==== Workers - ETL & Data | Functions ====
@@ -120,11 +149,25 @@ class AdminService:
       self, data:EtlTriggerIn, 
       triggered_by:str
       ) -> dict: # type: ignore
+    """
+      - ETL significa Extract, Transform, Load.
+      - Qué hace:
+          Crea un registro EtlRun.
+          Marca el estado como running.
+          Guarda quién disparó el proceso.
+          Hace flush para obtener el run_id.
+          Devuelve un estado de “queued”.
+      - En un sistema real, aquí normalmente se enviaría una tarea a un worker de fondo como Celery, ARQ o RQ.
+    """  # noqa: E501
     pass
 
   async def get_etl_status(
       self, dataset:str | None = None
   ) -> EtlStatusOut: # type: ignore
+    """
+      - Consulta la última ejecución ETL de un dataset.
+      - Si no existe ninguna ejecución, devuelve:
+    """
     pass
   
   async def get_dead_letters(
@@ -134,12 +177,28 @@ class AdminService:
       dataset:str | None = None, 
       error_code: str | None = None
   ) -> Paginated[DeadLetterOut]: # type: ignore
+    """
+      - Una Dead Letter Queue (DLQ) almacena registros que no pudieron procesarse correctamente.
+      - Qué hace: 
+          Filtra por dataset.
+          Filtra por código de error.
+          Ordena por fecha de rechazo.
+          Pagína resultados.
+      - Supón que un CSV trae una fecha inválida. Ese registro puede enviarse a dead_letters en lugar de abortar toda la carga ETL.
+    """  # noqa: E501
     pass
 
   # = ---- Warehouse Data ---- #
   async def refresh_warehouse(
       self
   ) -> dict: # type: ignore
+    """
+      Ejecuta una función SQL:
+        Qué suele hacer esa función:
+          Refrescar vistas materializadas.
+          Recalcular métricas agregadas.
+          Actualizar tablas analíticas.
+    """
     pass
 
   # === ---- Log (Logging / History) ---- === #
@@ -150,4 +209,16 @@ class AdminService:
       table_name: str | None = None,
       operation: str | None = None
   ) -> dict: # type: ignore
+    """
+      Consulta cambios realizados sobre la base de datos.
+        Filtros disponibles:
+          Tabla afectada.
+          Operación (INSERT, UPDATE, DELETE).
+        Formato de salida:
+          Para qué sirve
+          Trazabilidad.
+          Cumplimiento.
+          Investigación de incidentes.
+          Auditoría de seguridad.
+    """
     pass
