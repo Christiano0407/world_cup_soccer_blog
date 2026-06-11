@@ -64,5 +64,47 @@
 from __future__ import annotations
 
 import uuid
-
 from datetime import UTC, datetime
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.exceptions import NotFoundError
+from app.models.orm import AuditLog, DeadLetter, EtlRun, User
+from app.schemas.schemas import (
+  AdminUserOut,
+  AdminUserUpdate,
+  DeadLetterOut,
+  EtlStatusOut,
+  EtlTriggerIn,
+  Paginated,
+)
+
+
+# ==== Admin Service: Logic Business ========================================================= #
+class AdminService: 
+  def __init__(self, db:AsyncSession) -> None:
+    self._db = db 
+
+  async def list_user(
+      self, page:int = 1, page_size:int = 20, 
+      role: str | None = None, is_active:bool | None = None
+      ) -> Paginated[AdminUserOut]:  # type: ignore
+    pass
+
+  async def _get_user(
+      self, user_id:str
+      ) -> User: # type: ignore
+    pass
+
+  async def get_user(
+      self, user_id:str
+  ) -> AdminUserOut: # type: ignore
+    pass
+
+  async def update_user(
+      self, user_id:str, 
+      data_update_user: AdminUserUpdate
+      ) -> AdminUserOut: # type: ignore
+    pass
+  
