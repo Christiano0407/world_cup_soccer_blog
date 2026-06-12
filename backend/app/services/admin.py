@@ -99,8 +99,23 @@ class AdminService:
       - Aplica OFFSET y LIMIT.
       - Convierte los modelos ORM a DTOs (AdminUserOut).
     """
-    pass
-  
+    query = select(User)
+
+    if role: 
+      q = query.where(User.role == role)
+    if is_active is not None:
+      q = query.where(User.is_active == is_active)
+    q = query.order_by(User.created_at.desc())
+
+    total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar() or 0
+
+    q = q.offset((page - 1) * page_size).limit(page_size)
+    result = await self._db.execute(q)
+
+    items = [AdminUserOut.model_validate(user) for user in result.scalars()]
+    pages = -(-total // page_size)
+    return Paginated(items=items, total=total, page=page, page_size=page_size, pages=pages)
+
   # === Obtener User Privado(Method) ===
   async def _get_user(
       self, user_id:str

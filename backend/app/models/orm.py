@@ -128,7 +128,7 @@ class Tournaments(Base):
   matches: Mapped[list[Match]] = relationship("Match", back_populates="tournament")
 
   @property
-  def svg_goals_per_match(self) -> float | None: 
+  def avg_goals_per_match(self) -> float | None: 
     if self.matches_played: 
       return round(self.goals_scored / self.matches_played, 2)
     return None
