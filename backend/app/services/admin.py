@@ -138,7 +138,8 @@ class AdminService:
     """
       - Devuelve un único usuario usando el método privado anterior y lo transforma a AdminUserOut.
     """
-    pass
+    user = await self._get_user(user_id)
+    return AdminUserOut.model_validate(user)
 
   async def update_user(
       self, user_id:str, 
