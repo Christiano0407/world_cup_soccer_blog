@@ -6,7 +6,7 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ConflictError, NotFoundError
-from app.models.orm import Match, PlayerAppearance, Team, Tournament
+from app.models.orm import Match, PlayerAppearance, Team, Tournaments
 from app.schemas.schemas import (  # noqa: E402
     AttendanceTrendPoint,
     ChoroplethPoint,
@@ -35,8 +35,8 @@ class TournamentService:
     def __init__(self, db: AsyncSession) -> None:
         self._db = db
 
-    async def _get(self, year: int) -> Tournament:
-        result = await self._db.execute(select(Tournament).where(Tournament.year == year))
+    async def _get(self, year: int) -> Tournaments:
+        result = await self._db.execute(select(Tournaments).where(Tournaments.year == year))
         t = result.scalar_one_or_none()
         if not t:
             raise NotFoundError(f"Torneo {year}")
@@ -49,14 +49,14 @@ class TournamentService:
         year_from: int | None = None,
         year_to: int | None = None,
     ) -> Paginated[TournamentListOut]:
-        q = select(Tournament)
+        q = select(Tournaments)
         if year_from:
-            q = q.where(Tournament.year >= year_from)
+            q = q.where(Tournaments.year >= year_from)
         if year_to:
-            q = q.where(Tournament.year <= year_to)
-        q = q.order_by(Tournament.year)
+            q = q.where(Tournaments.year <= year_to)
+        q = q.order_by(Tournaments.year)
 
-        total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar()
+        total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar() or 0  # noqa: E501
         q = q.offset((page - 1) * page_size).limit(page_size)
         result = await self._db.execute(q)
 
@@ -72,11 +72,11 @@ class TournamentService:
 
     async def create_tournament(self, data: TournamentIn) -> TournamentOut:
         existing = await self._db.execute(
-            select(Tournament).where(Tournament.year == data.year)
+            select(Tournaments).where(Tournaments.year == data.year)
         )
         if existing.scalar_one_or_none():
             raise ConflictError(f"El torneo {data.year} ya existe")
-        t = Tournament(**data.model_dump())
+        t = Tournaments(**data.model_dump())
         self._db.add(t)
         await self._db.flush()
         return TournamentOut.model_validate(t)
@@ -103,7 +103,7 @@ class TournamentService:
         if stage:
             q = q.where(Match.stage == stage)
 
-        total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar()
+        total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar() or 0  # noqa: E501
         q = q.order_by(Match.match_datetime).offset((page - 1) * page_size).limit(page_size)
         result = await self._db.execute(q)
 
@@ -186,7 +186,7 @@ class MatchService:
         if min_goals is not None:
             q = q.where((Match.home_goals + Match.away_goals) >= min_goals)
 
-        total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar()
+        total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar() or 0  # noqa: E501
         q = q.order_by(Match.match_datetime.desc()).offset((page - 1) * page_size).limit(page_size)
         result = await self._db.execute(q)
 
@@ -260,7 +260,7 @@ class PlayerService:
         if year:
             q = q.join(Match).where(Match.year == year)
 
-        total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar()
+        total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar() or 0
         q = q.offset((page - 1) * page_size).limit(page_size)
         result = await self._db.execute(q)
 
