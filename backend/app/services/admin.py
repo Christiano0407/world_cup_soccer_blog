@@ -124,7 +124,13 @@ class AdminService:
       - Busca un usuario por UUID.
           Si no existe, lanza NotFoundError, que normalmente termina en un 404 Not Found
     """
-    pass
+    result_query = await self._db.execute(
+      select(User).where(User.user_id == uuid.UUID(user_id))
+    )
+    user = result_query.scalar_one_or_none()
+    if not user:
+      raise NotFoundError(f"User: {user_id} | Usuario no encontrado - Not Found User (404)")
+    return user
 
   async def get_user(
       self, user_id:str
