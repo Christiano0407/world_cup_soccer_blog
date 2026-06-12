@@ -290,4 +290,26 @@ class AdminService:
           Investigación de incidentes.
           Auditoría de seguridad.
     """
-    pass
+    q = select(AuditLog)
+    if table_name:
+        q = q.where(AuditLog.table_name == table_name)
+    if operation:
+        q = q.where(AuditLog.operation == operation)
+    q = q.order_by(AuditLog.changed_at.desc())
+
+    total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar()
+    q = q.offset((page - 1) * page_size).limit(page_size)
+    result = await self._db.execute(q)
+
+    items = [
+        {
+            "log_id": row.log_id,
+            "schema_name": row.schema_name,
+            "table_name": row.table_name,
+            "operation": row.operation,
+            "changed_by": row.changed_by,
+            "changed_at": row.changed_at.isoformat(),
+        }
+        for row in result.scalars()
+    ]
+    return {"items": items, "total": total}
