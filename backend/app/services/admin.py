@@ -151,7 +151,13 @@ class AdminService:
           Permite activar/desactivar la cuenta.
           Actualiza updated_at.
     """
-    pass
+    user = await self._get_user(user_id)
+    if data_update_user.role is not None:
+      user.role = data_update_user.role
+    if data_update_user.is_active is not None:
+      user.is_active = data_update_user.is_active
+    user.update_at = datetime.now(UTC)
+    return AdminUserOut.model_validate(user)
 
   async def soft_delete_user(
     self, user_Id:str  # noqa: N803
@@ -164,7 +170,9 @@ class AdminService:
         - Evita romper referencias.
         - Permite restaurar usuarios.
     """
-    pass
+    user = await self._get_user(user_Id)
+    user.is_active = False
+    user.update_at = datetime.now(UTC)
   
   # ==== Workers - ETL & Data | Functions ====
   async def trigger_etl(
