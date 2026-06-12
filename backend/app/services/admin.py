@@ -245,10 +245,9 @@ class AdminService:
 
     total = (await  self._db.execute(
       select(func.count()).select_from(q.subquery())
-    )).scalar()
+    )).scalar() or 0
 
     q = q.offset((page - 1) * page_size).limit(page_size)
-    total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar()
     result = await self._db.execute(q)
 
     items = [DeadLetterOut.model_validate(d1) for d1 in result.scalars()]
