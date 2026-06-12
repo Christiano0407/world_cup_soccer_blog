@@ -189,7 +189,18 @@ class AdminService:
           Devuelve un estado de “queued”.
       - En un sistema real, aquí normalmente se enviaría una tarea a un worker de fondo como Celery, ARQ o RQ.
     """  # noqa: E501
-    pass
+    run = EtlRun(
+      dataset=data.dataset, 
+      worker="celery",
+      status= "running", 
+      started_at=datetime.now(UTC), 
+      triggered_by = triggered_by,
+    )
+    self._db.add(run)
+    await self._db.flush() # Object change in DB
+    # In production: enqueue to Celery/ARQ here
+    # celery_app.send_task("etl.run", args=[data.dataset, run.run_id])
+    return { "status": "queued", "dataset": data.dataset }
 
   async def get_etl_status(
       self, dataset:str | None = None
@@ -198,7 +209,15 @@ class AdminService:
       - Consulta la última ejecución ETL de un dataset.
       - Si no existe ninguna ejecución, devuelve:
     """
-    pass
+    query = select(EtlRun).order_by(EtlRun.started_at.desc())
+    if dataset: 
+      q = query.where(EtlRun.dataset == dataset)
+    q = query.limit(1)
+    result = await self._db.execute(q)
+    run = result.scalar_one_or_none()
+    if not run: 
+      return EtlStatusOut(status="success")
+    return EtlStatusOut.model_validate(run)
   
   async def get_dead_letters(
       self, 
@@ -216,7 +235,26 @@ class AdminService:
           Pagína resultados.
       - Supón que un CSV trae una fecha inválida. Ese registro puede enviarse a dead_letters en lugar de abortar toda la carga ETL.
     """  # noqa: E501
-    pass
+    q = select(DeadLetter)
+    if dataset: 
+      q = q.where(DeadLetter.source_table == dataset)
+    if error_code: 
+      q = q.where(DeadLetter.error_code == error_code)
+    
+    q = q.order_by(DeadLetter.rejected_at.desc())
+
+    total = (await  self._db.execute(
+      select(func.count()).select_from(q.subquery())
+    )).scalar()
+
+    q = q.offset((page - 1) * page_size).limit(page_size)
+    total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar()
+    result = await self._db.execute(q)
+
+    items = [DeadLetterOut.model_validate(d1) for d1 in result.scalars()]
+    pages = -(-total // page_size)
+    return Paginated(items=items, total=total, page=page, page_size=page_size, pages = pages)
+
 
   # = ---- Warehouse Data ---- #
   async def refresh_warehouse(
@@ -229,7 +267,8 @@ class AdminService:
           Recalcular métricas agregadas.
           Actualizar tablas analíticas.
     """
-    pass
+    await self._db.execute(__import__("sqlalchemy").text("SELECT warehouse.refresh_all()"))
+    return { "status": "ok", "message": "All warehouse views refreshed" }
 
   # === ---- Log (Logging / History) ---- === #
   async def get_audit_log(
