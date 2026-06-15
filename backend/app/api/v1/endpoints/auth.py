@@ -31,14 +31,17 @@ from app.services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+# ─── POST /register ───────────────────────────────────────────────────────────
 @router.post("/register", 
              response_model=TokenOut, 
-             status_code=status.HTTP_201_CREATED)
+             status_code=status.HTTP_201_CREATED,
+             summary="Registrar nuevo Usuario | Register new User"
+             )
 async def register(  # noqa: ANN201
   data_register: RegisterIn,
   response: Response, 
   auth_service: AuthService = Depends(get_auth_service)  # noqa: B008
-): 
+) -> TokenOut: 
   """
     Registrar nuevo Usuario | Register new User.
     
@@ -47,3 +50,21 @@ async def register(  # noqa: ANN201
     - **201 Created**: Si el usuario se crea con éxito; inyecta la cookie HTTP-only.
   """
   return await auth_service.register(data_register, response)
+
+
+# ─── POST /login ───────────────────────────────────────────────────────────
+
+
+# ─── POST /refresh ───────────────────────────────────────────────────────────
+
+
+# ─── POST /logOut ───────────────────────────────────────────────────────────
+
+
+# ─── Get /me ───────────────────────────────────────────────────────────
+
+
+# ─── PATCH /me ───────────────────────────────────────────────────────────
+
+
+# ─── POST /change password ───────────────────────────────────────────────────────────
