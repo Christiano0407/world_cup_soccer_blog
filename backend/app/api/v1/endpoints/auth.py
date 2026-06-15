@@ -40,7 +40,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 async def register(  # noqa: ANN201
   data_register: RegisterIn,
   response: Response, 
-  auth_service: AuthService = Depends(get_auth_service)  # noqa: B008
+  auth_service: AuthService = Depends(get_auth_service),  # noqa: B008
 ) -> TokenOut: 
   """
     Registrar nuevo Usuario | Register new User.
@@ -53,6 +53,24 @@ async def register(  # noqa: ANN201
 
 
 # ─── POST /login ───────────────────────────────────────────────────────────
+@router.post("/login",
+             response_model=TokenOut, 
+             status_code=status.HTTP_200_OK,
+             summary="Iniciar Sesión (Init Session)"
+             )
+async def login(
+  data_login: LoginIn, 
+  response: Response, 
+  auth_service: AuthService = Depends(get_auth_service),  # noqa: B008
+) -> TokenOut:
+  """
+     Iniciar Sesión | Login.
+ 
+    - **200**: Login exitoso; inyecta cookie `refresh_token` HTTP-only.
+    - **401**: Credenciales inválidas.
+    - **422**: Datos inválidos.
+  """
+  return await auth_service.login(data_login, response)
 
 
 # ─── POST /refresh ───────────────────────────────────────────────────────────
