@@ -138,7 +138,11 @@ class AuthService:
     )
 
     self._db.add(user)
-    await self._db.flush() # Get user_id
+    await self._db.flush() # Get user_id | "¿Por qué flush() en lugar de commit()? 
+    # Al ejecutar self._db.add(user) y luego await self._db.flush(), obligas  
+    # a SQLAlchemy a enviar la sentencia INSERT a PostgreSQL. 
+    # En ese milisegundo, la base de datos genera y retorna
+    # el user_id (tu campo UUID)."#
 
     access = create_access_token(str(user.user_id), user.role, self._settings)
     refresh = create_refresh_token(str(user.user_id), self._settings)
@@ -189,7 +193,7 @@ class AuthService:
     
     # User
     user = await self._get_user_by_id(user_id)
-    if user.is_active:
+    if not user.is_active:
       raise AuthenticationError("Cuenta Inactiva u Desactivada | Vuelve a activar tu cuenta")
     
     # Rotate: Revoke Old Jti (token) 
