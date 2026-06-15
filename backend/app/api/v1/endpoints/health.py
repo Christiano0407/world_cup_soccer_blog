@@ -44,7 +44,7 @@ async def health_db(db: AsyncSession = Depends(get_db)) -> ComponentHealthOut:
   try:
     start = time.perf_counter()
     await db.execute(text("SELECT 1"))
-    latency = round((time.perf_counter() - start) * 100, 2)
+    latency = round((time.perf_counter() - start) * 1000, 2)
     return ComponentHealthOut(
       component="db", 
       status="ok", 
