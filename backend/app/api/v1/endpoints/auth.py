@@ -157,7 +157,7 @@ async def get_me(
 @router.patch("/me", 
               response_model=UserOut, 
               status_code=status.HTTP_200_OK, 
-              summary=" Actualizar perfil propio | Actualizo mi perfil (Password) & Authentication & Authorization"  # noqa: E501
+              summary="Actualizar perfil propio | Actualizo mi perfil (Password) & Authentication & Authorization"  # noqa: E501
               )
 async def patch_me(
   data_update: UserUpdateIn, 
@@ -174,4 +174,23 @@ async def patch_me(
   return await auth_service.update_me(current_user.user_id, data_update)
 
 
-# ─── POST /change password ───────────────────────────────────────────────────────────
+# ─── POST /change password [Cambiar & Actualizar la contraseña] ───────────────────────────────────
+@router.post("/change-password",
+                status_code=status.HTTP_204_NO_CONTENT,
+                summary="Contraseña actualizada & Autenticada & Autorizada",
+            )
+async def changepassword(
+  data_change: ChangePasswordIn, 
+  current_user: CurrentUser = Depends(get_current_user),  # noqa: B008
+  auth_service: AuthService = Depends(get_auth_service),  # noqa: B008
+) -> None:
+  """
+   Cambia la contraseña del usuario autenticado.
+ 
+    - **204**: Contraseña actualizada.
+    - **400**: Contraseña actual incorrecta.
+    - **401**: Token ausente o inválido.
+  """
+  await auth_service.change_password(current_user.user_id, data_change)
+  
+ 
