@@ -21,7 +21,7 @@ dependencies = [
     # Auth
     "python-jose[cryptography]>=3.3.0",  # JWT
     "passlib[argon2]>=1.7.4",            # argon2id password hashing
-    "python-multipart>=0.0.9",           # form data (login form support)
+    "python-multipart>=0.0.31",           # form data (login form support)
 
     # Validation & config
     "pydantic>=2.6.0",
