@@ -134,10 +134,44 @@ async def logout(
 
   await auth_service.logout(current_user.user_id, bearer_jti, response)
 
-# ─── Get /me ───────────────────────────────────────────────────────────
+# ─── Get /me [Perfíl del Usuario] ───────────────────────────────────────────────────────────
+@router.get("/me",
+            response_model=UserOut, 
+            status_code=status.HTTP_200_OK,
+            summary="Perfil del usuario autenticado (Mí perfil)"
+            )
+async def get_me(
+  current_user: CurrentUser=Depends(get_current_user),  # noqa: B008
+  auth_service: AuthService=Depends(get_auth_service),  # noqa: B008
+) -> UserOut:
+  """
+    Retorna el perfil del usuario autenticado.
+ 
+    - **200**: Perfil del usuario.
+    - **401**: Token ausente o inválido.
+  """
+  return await auth_service.get_me(current_user.user_id)
 
 
-# ─── PATCH /me ───────────────────────────────────────────────────────────
+# ─── PATCH /me [Actualizar la información/Perfíl del Usuario] ─────────────────────────────────────
+@router.patch("/me", 
+              response_model=UserOut, 
+              status_code=status.HTTP_200_OK, 
+              summary=" Actualizar perfil propio | Actualizo mi perfil (Password) & Authentication & Authorization"  # noqa: E501
+              )
+async def patch_me(
+  data_update: UserUpdateIn, 
+  current_user: CurrentUser=Depends(get_current_user),  # noqa: B008
+  auth_service: AuthService=Depends(get_auth_service),  # noqa: B008
+) -> UserOut:
+  """
+    Actualiza el `display_name` del usuario autenticado.
+    El rol **no** es modificable por el propio usuario.
+ 
+    - **200**: Perfil actualizado.
+    - **401**: Token ausente o inválido.
+  """
+  return await auth_service.update_me(current_user.user_id, data_update)
 
 
 # ─── POST /change password ───────────────────────────────────────────────────────────

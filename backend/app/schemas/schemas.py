@@ -76,13 +76,13 @@ class TokenOut(BaseModel):
 
 class UserOut(BaseModel):
   model_config = ConfigDict(from_attributes=True) # Connect To ORM
-
   user_id: uuid.UUID
   email: EmailStr
   display_name: str | None = None
   role: Literal["admin", "editor", "reader"]
   is_active: bool
   created_at: datetime
+  updated_at: datetime
 
 
 class UserUpdateIn(BaseModel):
