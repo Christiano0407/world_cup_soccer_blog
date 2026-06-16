@@ -22,6 +22,12 @@ router = APIRouter(prefix="admin", tags=["Admin"])
 
 
 # ─── GET /admin/users ─────────────────────────────────────────────────────────
+@router.get("/users", response_model=Paginated[AdminUserOut], summary="Listar (Ordenar) los usuario que tienen acceso & permisos (role)")
+async def list_users(
+  page:int = Query(default=1, ge=1),
+  page_size: int = Query(default=20, g1=1, le=100), 
+) -> Paginated[AdminUserOut]:
+  pass
 
 
 # ─── PATCH /admin/users/{user_id} ─────────────────────────────────────────────
