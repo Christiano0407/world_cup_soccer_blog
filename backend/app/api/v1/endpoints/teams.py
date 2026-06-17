@@ -1,5 +1,9 @@
 """
   # Endpoint teams [/api/v1/teams]
+  ## ================================ ##
+  - "El símbolo _: en ese contexto de Python 
+  (específicamente en FastAPI o Pydantic) significa que la 
+  variable se está descartando intencionalmente"
 """
 from __future__ import annotations
 
@@ -46,7 +50,25 @@ async def teams_list(
 
 
 # ─── POST /teams ──────────────────────────────────────────────────────────────
-
+@router.post(
+   "/teams", 
+   response_model=TeamOut,
+   status_code=status.HTTP_201_CREATED,
+   summary="Crear selección/equipo (admin)", 
+)
+async def create_team(
+   data_team:TeamIn,
+   _:CurrentUser = Depends(require_editor_or_admin),
+   team_service:TeamService = Depends(get_team_service),
+) -> TeamOut:
+   """
+    Crea una nueva selección nacional.
+    - **201**: Equipo creado.
+    - **401**: Token ausente o inválido.
+    - **403**: Sin permisos suficientes.
+    - **409**: Iniciales ya registradas.
+   """
+   return await team_service.create_team(data_team=data_team)
 
 # ─── GET /teams/ranking  (debe ir ANTES de /{initials}) ──────────────────────
 

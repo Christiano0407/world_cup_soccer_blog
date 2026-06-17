@@ -1,5 +1,9 @@
 """
   Endpoints: Admin [Rutas para admin - API]
+  ## ================================ ##
+  - "El símbolo _: en ese contexto de Python 
+  (específicamente en FastAPI o Pydantic) significa que la 
+  variable se está descartando intencionalmente"
 """
 
 from __future__ import annotations
