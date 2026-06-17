@@ -95,9 +95,39 @@ async def teams_ranking(
    return await team_services.get_ranking(sort_by=sort_by, min_matches=min_matches)
 
 # ─── GET /teams/{initials} ────────────────────────────────────────────────────
+@router.get("/{initials}", 
+            response_model=TeamStatsOut, 
+            summary="Detalles (Details) & Estadísticas (stats) de una Selección/Equipo")
+async def get_team(initials:str, 
+                   team_service:TeamService = Depends(get_team_service),) -> TeamStatsOut:
+   """
+      Retorna el detalle y estadísticas históricas de una selección por sus iniciales FIFA.
+      - **200**: Stats del equipo.
+      - **404**: Selección no encontrada.
+   """
+   return await team_service.get_team_stats(initials.upper())
+
 
 
 # ─── PATCH /teams/{initials} ──────────────────────────────────────────────────
+@router.get("/initials",
+            response_model=TeamOut, 
+            summary="Actualizar selección/equipo (admin) ",
+            )
+async def update_team(
+   initials: str, 
+   data: TeamUpdate,
+   _:CurrentUser = Depends(require_editor_or_admin),  # noqa: B008
+   team_service: TeamService = Depends(get_team_service)  # noqa: B008
+) -> TeamOut:
+   """
+      Actualiza los datos de una selección nacional.
+      - **200**: Equipo actualizado.
+      - **401**: Token ausente o inválido.
+      - **403**: Sin permisos suficientes.
+      - **404**: Selección no encontrada.
+   """
+   return await team_service.update_team(initials=initials.upper(), data_update=data)
 
 
 # ─── GET /teams/{initials}/matches ────────────────────────────────────────────
