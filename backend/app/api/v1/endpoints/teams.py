@@ -131,6 +131,13 @@ async def update_team(
 
 
 # ─── GET /teams/{initials}/matches ────────────────────────────────────────────
+@router.get("/{initials}/matches",
+            response_model=Paginated[MatchListOut], 
+            status_code=status.HTTP_200_OK, 
+            summary="Historial de partidos de una Selección/Equipos en un Mundial"
+            )
+async def team_matches() -> Paginated[MatchListOut]:
+   pass
 
 
 # ─── GET /teams/{initials}/vs/{opponent} ─────────────────────────────────────
