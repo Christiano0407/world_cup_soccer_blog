@@ -136,8 +136,21 @@ async def update_team(
             status_code=status.HTTP_200_OK, 
             summary="Historial de partidos de una Selección/Equipos en un Mundial"
             )
-async def team_matches() -> Paginated[MatchListOut]:
-   pass
-
+async def team_matches(
+   initials: str, 
+   page: int = Query(default=1, ge=1), 
+   page_size: int = Query(default=20, ge=1, len=100),
+   year: int | None = Query(default=None, ge=1930, le=2030), 
+   stage: str | None = Query(default=None, description="Group Stage | Final | semi-final"), 
+   team_service: TeamService = Depends(get_team_service),  # noqa: B008
+) -> Paginated[MatchListOut]:
+   """
+      Retorna el historial paginado de partidos de una selección.
+      - **200**: Lista paginada de partidos.
+      - **404**: Selección no encontrada.
+   """
+   return await team_service.get_matches(
+      initials.upper(), page=page, page_size=page_size, year=year, stage=stage 
+   )
 
 # ─── GET /teams/{initials}/vs/{opponent} ─────────────────────────────────────
