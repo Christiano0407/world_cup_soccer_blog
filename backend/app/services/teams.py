@@ -121,7 +121,7 @@ class TeamService:
   async def get_ranking(
       self,
       sort_by: str = "titles", 
-      min_matches: int = 5
+      min_matches: int = 3
   ) -> list[TeamStatsOut]:
     
     result = await self._db.execute(select(Team).where(Team.active == True))  # noqa: E712
