@@ -53,62 +53,68 @@ class TeamService:
   # === [GET | Private] === #
   async def _get_team(self, initials:str) -> Team:
     result_query = await self._db.execute(
-      select(Team).where(func.upper(Team.initials == initials.upper()))
+      select(Team).where(func.upper(Team.initials) == initials.upper())
     )
     teams = result_query.scalar_one_or_none()
     if not teams:
-      raise ValueError(f"Equipo/Selección {initials}")
+      raise NotFoundError(f"Selección(Team): {initials} no encontrada")
     return teams
   
   async def get_team_stats(self, initials:str) -> TeamStatsOut:
     team = await self._get_team(initials)
     # = Aggregate Match stats in a Single Query = #
     stats_query = text("""
-        SELECT 
-          COUNT(DISTINCT t.tournament_id)                               AS tournaments_played, 
-          COUNT(CASE WHEN t.winner = :name THEN 1 END)                  AS titles,
-          COUNT(CASE WHEN t.runners_up = :name THEN 1 END)              AS runner_ups, 
-          COUNT(m.match_id)                                             AS total_matches,
-          COUNT(CASE WHEN
-                       (m.home_team_initials = :init AND m.home_goals > m.away_goals) OR
-                       (m.away_team_initials = :init AND m.away_goals > m.home_goals) 
-                       THEN 1 END)                                      AS wins,
-          COUNT(CASE WHEN m.home_goals = m.away_goals THEN 1 END)       AS draws,
-          COUNT(CASE WHEN 
-                (m.home_team_initials = :init AND m.home_goals < m.away_goals) OR
-                (m.away_team_initials = :init AND m.away_goals < m.home_goals
-                       THEN 1 END)                                      AS losses,
-          COALESCE(SUM(CASE WHEN m.home_team_initials = :init 
-                       THEN m.home_goals ELSE m.away_goals END
-                       ), 0)                                            AS goals_conceded,
-          COALESCE(SUM(CASE WHEN m.home_team_initials = :init
-                       THEN m.away_goals ELSE m.home_goals END), 0)     AS goals_conceded
-          FROM tournaments t
-          JOIN matches m ON m.tournaments_id = t.tournament_id
-          WHERE m.home_team_initials = :init OR m.away_team_initials = :init
+         SELECT
+              COUNT(DISTINCT t.tournament_id)                                 AS tournaments_played,
+              COUNT(CASE WHEN t.winner    = :name THEN 1 END)                 AS titles,
+              COUNT(CASE WHEN t.runners_up = :name THEN 1 END)                AS runner_ups,
+              COUNT(m.match_id)                                               AS total_matches,
+              COUNT(CASE WHEN
+                  (m.home_team_initials = :init AND m.home_goals > m.away_goals) OR
+                  (m.away_team_initials = :init AND m.away_goals > m.home_goals)
+                  THEN 1 END)                                                 AS wins,
+              COUNT(CASE WHEN m.home_goals = m.away_goals THEN 1 END)         AS draws,
+              COUNT(CASE WHEN
+                  (m.home_team_initials = :init AND m.home_goals < m.away_goals) OR
+                  (m.away_team_initials = :init AND m.away_goals < m.home_goals)
+                  THEN 1 END)                                                 AS losses,
+              COALESCE(SUM(CASE
+                  WHEN m.home_team_initials = :init THEN m.home_goals
+                  ELSE m.away_goals
+              END), 0)                                                        AS goals_scored,
+              COALESCE(SUM(CASE
+                  WHEN m.home_team_initials = :init THEN m.away_goals
+                  ELSE m.home_goals
+              END), 0)                                                        AS goals_conceded
+            FROM tournaments t
+            JOIN matches m ON m.tournament_id = t.tournament_id
+            WHERE m.home_team_initials = :init OR m.away_team_initials = :init
     """)
 
-    row = (await self._db.execute(stats_query, {"init": team.initials, "name": team.name})).one()
-    goals_scored = row.goals_conceded or 0
+    row = (
+        await self._db.execute(stats_query, {"init": team.initials, "name": team.name})
+    ).one()
+
+    goals_scored   = row.goals_scored   or 0
     goals_conceded = row.goals_conceded or 0
-    total = row.total_matches or 0
-    wins = row.wins or 0
+    total          = row.total_matches  or 0
+    wins           = row.wins           or 0
 
     return TeamStatsOut(
-      initials=team.initials, 
-      name=team.name,
-      confederation=team.confederation, 
-      tournaments_played=row.tournaments_played or 0,
-      titles=row.titles or 0, 
-      runner_ups=row.runner_ups or 0, 
-      total_matches=total, 
-      wins=wins, 
-      draws=row.draw or 0, 
-      losses=row.losses or 0, 
-      goals_scored=goals_scored, 
-      goals_conceded=goals_conceded, 
-      goal_difference=goals_scored - goals_conceded, 
-      win_rate_pct=round((wins/total * 100), 2) if total else 0.0
+        initials=team.initials,
+        name=team.name,
+        confederation=team.confederation,
+        tournaments_played=row.tournaments_played or 0,
+        titles=row.titles     or 0,
+        runner_ups=row.runner_ups or 0,
+        total_matches=total,
+        wins=wins,
+        draws=row.draws       or 0,   # BUG FIX: era row.draw (sin 's')
+        losses=row.losses     or 0,
+        goals_scored=goals_scored,
+        goals_conceded=goals_conceded,
+        goal_difference=goals_scored - goals_conceded,
+        win_rate_pct=round((wins / total * 100), 2) if total else 0.0,
     )
 
   # === [GET] === #

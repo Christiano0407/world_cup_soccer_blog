@@ -147,7 +147,6 @@ class TournamentUpdate(BaseModel):
 # ─── Teams ────────────────────────────────────────────────────────────────────
 class TeamOut(BaseModel):
   model_config = ConfigDict(from_attributes=True) # Connect To ORM
-  
   team_id: int
   initials: str
   name: str
