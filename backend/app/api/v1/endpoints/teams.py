@@ -71,7 +71,28 @@ async def create_team(
    return await team_service.create_team(data_team=data_team)
 
 # ─── GET /teams/ranking  (debe ir ANTES de /{initials}) ──────────────────────
-
+@router.get(
+   "/ranking", 
+   response_model=list[TeamStatsOut], 
+   description="Ranking Histórico de Selecciones de Fútbol en el Mundial",
+)
+async def teams_ranking( 
+   sort_by: Literal["titles", "wins", "goals_scored", "total_matches"] = Query(
+      default="titles", 
+      description="Criterio de Ordenación (por Orden)",
+   ),
+   min_matches: int = Query(
+      default=3, 
+      ge=1,
+      description="Mínimo de Partidos jugados para aparecer: 3", 
+   ), 
+   team_services:TeamService = Depends(get_team_service),
+) -> list[TeamStatsOut]:
+   """
+      Ranking histórico de selecciones ordenado por el criterio elegido.
+      - **200**: Lista de stats ordenada.
+   """
+   return await team_services.get_ranking(sort_by=sort_by, min_matches=min_matches)
 
 # ─── GET /teams/{initials} ────────────────────────────────────────────────────
 
