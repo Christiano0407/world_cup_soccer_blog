@@ -109,7 +109,26 @@ async def update_tournament(
   return await tournament_service.update_tournament(year, data)
 
 # ─── DELETE /tournaments/{year} ───────────────────────────────────────────────
-
+@router.delete(
+  "/{year}", 
+  status_code=status.HTTP_204_NO_CONTENT,
+  summary=" Eliminar edición mundialista (Torneo) "
+)
+async def delete_tournament(
+  year: int, 
+  _:CurrentUser = Depends(get_tournament_service),  # noqa: B008
+  tournament_service: TournamentService = Depends(get_tournament_service),  # noqa: B008
+) -> None:
+  """
+    Elimina una edición del Mundial.
+    **⚠ ADVERTENCIA**: Solo usar si no tiene partidos asociados.
+    Los datos históricos no deben eliminarse.
+    - **204**: Torneo eliminado.
+    - **401**: Token ausente o inválido.
+    - **403**: Rol insuficiente — requiere **admin** (no editor).
+    - **404**: Edición no encontrada.
+  """
+  await tournament_service.delete_tournament(year)
 
 # ─── GET /tournaments/{year}/matches ──────────────────────────────────────────
 
