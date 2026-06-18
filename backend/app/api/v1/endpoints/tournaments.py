@@ -49,13 +49,64 @@ async def list_tournaments(
 
 
 # ─── POST /tournaments ────────────────────────────────────────────────────────
-
+@router.post(
+  "/tournaments", 
+  response_model=TournamentOut, 
+  status_code=status.HTTP_201_CREATED, 
+  summary="Crear Ediciones (Torneo) - (admin)",
+)
+async def create_tournament(
+  data: TournamentIn, 
+  _:CurrentUser = Depends(require_editor_or_admin),  # noqa: B008
+  tournament_service:TournamentService = Depends(get_tournament_service),  # noqa: B008
+) -> TournamentOut:
+  """
+    Crea una nueva edición del Mundial.
+ 
+    - **201**: Torneo creado.
+    - **401**: Token ausente o inválido.
+    - **403**: Sin permisos suficientes.
+    - **409**: Año ya registrado.
+  """
+  return await tournament_service.create_tournament(data)
 
 # ─── GET /tournaments/{year} ──────────────────────────────────────────────────
-
+@router.get("/{year}",
+            response_model=TournamentOut, 
+            status_code=status.HTTP_200_OK, 
+            summary="Mundiales (torneo), detallado por año",
+            )
+async def get_year_tournament(
+  year: int, 
+  tournament_service: TournamentService = Depends(get_tournament_service),  # noqa: B008
+) -> TournamentOut: 
+  """
+  Retorna el detalle completo de una edición del Mundial por su año.
+    - **200**: Detalle del torneo.
+    - **404**: Edición no encontrada.
+  """ 
+  return await tournament_service.get_tournament(year)
 
 # ─── PATCH /tournaments/{year} ────────────────────────────────────────────────
-
+@router.patch(
+  "/{year}",
+  response_model=TournamentOut, 
+  summary=" Actualizar edición - Mundial por año (admin)", 
+)
+async def update_tournament(
+  year: int, 
+  data: TournamentUpdate, 
+  _:CurrentUser = Depends(get_tournament_service),  # noqa: B008
+  tournament_service: TournamentService = Depends(get_tournament_service),  # noqa: B008
+) -> TournamentOut:
+  """
+     Actualiza datos de una edición del Mundial.
+      - **200**: Torneo actualizado.
+      - **401**: Token ausente o inválido.
+      - **403**: Sin permisos suficientes.
+      - **404**: Edición no encontrada.
+  """
+  return await tournament_service.update_tournament(year, data)
 
 # ─── DELETE /tournaments/{year} ───────────────────────────────────────────────
 
