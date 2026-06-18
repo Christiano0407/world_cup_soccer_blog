@@ -42,9 +42,9 @@ async def list_tournaments(
     Lista todas las ediciones del Mundial FIFA paginadas.
       - **200**: Lista paginada de torneos.
   """
-return await tournament_service.list_tournaments(
-  page=page, page_size=page_size, year_from=year_from, year_to=year_to
-)
+  return await tournament_service.list_tournaments(
+    page=page, page_size=page_size, year_from=year_from, year_to=year_to
+  )
 
 
 
