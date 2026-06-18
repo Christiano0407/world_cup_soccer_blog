@@ -154,3 +154,19 @@ async def team_matches(
    )
 
 # ─── GET /teams/{initials}/vs/{opponent} ─────────────────────────────────────
+@router.get("/{initials}/head-to-head/{opponent}",
+            response_model=HeadToHeadOut, 
+            status_code=status.HTTP_200_OK,
+            summary="Head-to-Head (Cara a cara) entre dos Selecciones",
+            )
+async def head_to_head(
+   initials:str, 
+   opponent:str, 
+   team_service: TeamService = Depends(get_team_service),  # noqa: B008
+   ) -> HeadToHeadOut:
+   """
+       Retorna el historial de enfrentamientos directos entre dos selecciones.
+         - **200**: Stats head-to-head.
+          - **404**: Una o ambas selecciones no encontradas.
+   """
+   return await team_service.head_to_head(initials.upper(), opponent.upper())

@@ -265,8 +265,8 @@ paths:
     $ref: './paths/teams.yaml#/~1api~1v1~1teams~1{initials}'
   /api/v1/teams/{initials}/matches:
     $ref: './paths/teams.yaml#/~1api~1v1~1teams~1{initials}~1matches'
-  /api/v1/teams/{initials}/vs/{opponent}:
-    $ref: './paths/teams.yaml#/~1api~1v1~1teams~1{initials}~1vs~1{opponent}'
+  /api/v1/teams/{initials}/head-to-head/{opponent}:
+    $ref: './paths/teams.yaml#/~1api~1v1~1teams~1{initials}~1head-to-head~1{opponent}'
 
     # ══════════════════════════════════════════════════════════════ #
     # TOURNAMENTS

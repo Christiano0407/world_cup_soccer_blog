@@ -146,7 +146,7 @@
                       items: { $ref: "../components/schemas/matches.yaml#/MatchListOut" }
       "404": { $ref: "../openapi.yaml#/components/responses/NotFound"}
 
-/api/v1/teams/{initials}/vs/{opponent}:
+/api/v1/teams/{initials}/head-to-head/{opponent}:
   get:
     tags: [Teams]
     summary: Head-to-Head (Cara a cara) entre dos Selecciones
