@@ -131,6 +131,28 @@ async def delete_tournament(
   await tournament_service.delete_tournament(year)
 
 # ─── GET /tournaments/{year}/matches ──────────────────────────────────────────
+@router.get("{year}/matches", 
+            response_model=Paginated[MatchListOut], 
+            status_code=status.HTTP_200_OK,
+            summary=" Partidos jugados por edición (Torneo) | Por año",
+            )
+async def tournament_matches(
+    year: int, 
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    stage: str | None = Query(
+      default=None, 
+      description="filtrar por fase (Etapas del torneo): Group 1, Final, etc."
+      ),
+    tournament_service: TournamentService = Depends(get_tournament_service), 
+    ) -> Paginated[MatchListOut]:
+  """
+    Retorna todos los partidos de una edición del Mundial, paginados.
+
+    - **200**: Lista paginada de partidos.
+    - **404**: Edición no encontrada.
+  """
+  return await tournament_service.get_matches(year=year, page=page, page_size=page_size, stage=stage)
 
 
 # ─── GET /tournaments/{year}/top-scorers ──────────────────────────────────────
