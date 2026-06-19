@@ -144,7 +144,7 @@ async def tournament_matches(
       default=None, 
       description="filtrar por fase (Etapas del torneo): Group 1, Final, etc."
       ),
-    tournament_service: TournamentService = Depends(get_tournament_service), 
+    tournament_service: TournamentService = Depends(get_tournament_service),  # noqa: B008
     ) -> Paginated[MatchListOut]:
   """
     Retorna todos los partidos de una edición del Mundial, paginados.
@@ -152,10 +152,41 @@ async def tournament_matches(
     - **200**: Lista paginada de partidos.
     - **404**: Edición no encontrada.
   """
-  return await tournament_service.get_matches(year=year, page=page, page_size=page_size, stage=stage)
+  return await tournament_service.get_matches(year=year, page=page, page_size=page_size, stage=stage)  # noqa: E501
 
 
 # ─── GET /tournaments/{year}/top-scorers ──────────────────────────────────────
+@router.get("{year}/top-scorers",
+            response_model=list[TopScorerOut],
+            summary="Top goleadores de una edición (Torneo | Mundial)",
+            )
+async def tournaments_top_scorers(
+  year: int, 
+  top: int = Query(default=10, ge=1, le=50), 
+  tournament_service: TournamentService = Depends(get_tournament_service),  # noqa: B008
+) -> list[TopScorerOut]:
+  """
+    Retorna los máximos goleadores de una edición del Mundial.
+    - **200**: Lista de goleadores ordenada por goles.
+    - **404**: Edición no encontrada.
+  """
+  return await tournament_service.get_top_scorers(year=year, top=top)
+  
 
 
 # ─── GET /tournaments/{year}/teams ────────────────────────────────────────────
+@router.get("/{year}/teams", 
+            response_model=list[TeamOut], 
+            status_code=status.HTTP_200_OK, 
+            summary="Equipos/Selecciones participantes por edición (Torneo/Mundial)",
+            )
+async def tournaments_teams(
+  year: int, 
+  tournament_service: TournamentService = Depends(get_tournament_service)  # noqa: B008
+) -> list[TeamOut]:
+  """
+  Retorna las selecciones que participaron en una edición del Mundial.
+    - **200**: Lista de equipos participantes.
+    - **404**: Edición no encontrada.
+  """
+  return await tournament_service.get_teams(year=year)
