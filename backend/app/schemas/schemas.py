@@ -210,7 +210,6 @@ class MatchOut(BaseModel):
  
 class MatchListOut(BaseModel):
     model_config = ConfigDict(from_attributes=True) # Connect To ORM
- 
     match_id: int
     year: int
     stage: str
