@@ -82,7 +82,7 @@ class UserOut(BaseModel):
   role: Literal["admin", "editor", "reader"]
   is_active: bool
   created_at: datetime
-  updated_at: datetime
+  update_at: datetime
 
 
 class UserUpdateIn(BaseModel):

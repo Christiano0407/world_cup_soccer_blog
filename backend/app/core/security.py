@@ -6,12 +6,13 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import Settings, get_setting
+from app.core.exceptions import AuthenticationError, AuthorizationError
 
 # ─── Password | Encriptado (bcrypt) | Hash (Hashed | HASHEANDO password  | SALT ───────── #
 # - Un hash es una función matemática: 
@@ -83,11 +84,7 @@ def decode_token(token: str, settings: Settings) -> dict[str, Any]:
     try: 
         return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
     except JWTError as exc: 
-        raise HTTPException(
-            status_code = status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales Inválidas o Expiraron | Fecha del 'Token' expiró", 
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
+        raise AuthenticationError("Credenciales Inválidas o Expiraron | Fecha del 'Token' expiró") from exc
 
 #? ─── FastAPI Dependencies ────────────────────────────────────────────────────
 # - Minimal parsed token payload injected into routes. (Carga útil mínima del token analizado inyectada en las rutas)  # noqa: E501
@@ -106,17 +103,10 @@ def _get_current_user(
         settings: Settings = Depends(get_setting),  # noqa: B008
 ) -> CurrentUser:
         if not credentials:
-                raise HTTPException(
-                     status_code=status.HTTP_401_UNAUTHORIZED, 
-                     detail= "Credenciales Inválidas o han expirado | Tiempo del Token expiró",
-                     headers={"WWW-Authenticate": "Bearer"},
-                )
+                raise AuthenticationError("Credenciales Inválidas o han expirado | Tiempo del Token expiró")
         payload = decode_token(credentials.credentials, settings)
         if payload.get("kind") != "access":
-             raise HTTPException(
-                  status_code=status.HTTP_401_UNAUTHORIZED, 
-                  detail="Token Inválido - Se requiere access token",
-             )
+             raise AuthenticationError("Token Inválido - Se requiere access token")
         return CurrentUser(user_id=payload["sub"], role=payload.get("role", "reader"))
 
 
@@ -138,7 +128,7 @@ def require_roles(*roles: str):  # noqa: ANN201
  
     def _dep(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:  # noqa: B008
         if user.role not in roles:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado | el token es inválido, está ausente o carece de los permisos necesarios")  # noqa: E501
+            raise AuthorizationError("Acceso denegado | el token es inválido, está ausente o carece de los permisos necesarios")
         return user
  
     return _dep
@@ -153,15 +143,9 @@ def get_refresh_token_from_cookies(
           settings: Settings=Depends(get_setting),  # noqa: B008
 ) -> dict[str, Any]:
     if not refresh_token:
-        raise HTTPException(
-             status_code=status.HTTP_401_UNAUTHORIZED, 
-             detail="Refresh Token Ausente"
-        )
+        raise AuthenticationError("Refresh Token Ausente")
     payload = decode_token(refresh_token, settings)
 
     if payload.get("kind") != "refresh":
-        raise HTTPException(
-             status_code=status.HTTP_401_UNAUTHORIZED,
-             detail="Token Inválido - se requiere 'refresh token'"
-        )
+        raise AuthenticationError("Token Inválido - se requiere 'refresh token'")
     return payload

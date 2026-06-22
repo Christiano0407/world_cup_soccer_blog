@@ -18,11 +18,11 @@ from app.schemas.schemas import (
 
 from app.services.domain_analytics import PlayerService
 
-router = APIRouter(prefix="players", tags=["Players"])
+router = APIRouter(prefix="/players", tags=["Players"])
 
 
 # ─── GET /players ─────────────────────────────────────────────────────────────
-@router.get("/players", 
+@router.get("/", 
             response_model=Paginated[PlayerAppearanceOut],
             summary=" Listar (orden) apariciones de jugadores (dentro del Mundial/Torneo). Agregamos filtros"  # noqa: E501
             )
@@ -47,7 +47,7 @@ async def players_list(
   )
 
 # ─── GET /players/search ─────────────────────────────────────────────────────────────
-@router.get("/players/search", 
+@router.get("/search", 
             response_model= list[PlayerAppearanceOut], 
             summary=" Búsqueda (search) de jugadores por nombre ",
             )

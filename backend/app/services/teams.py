@@ -120,31 +120,83 @@ class TeamService:
   # === [GET] === #
   async def get_ranking(
       self,
-      sort_by: str = "titles", 
+      sort_by: str = "titles",
       min_matches: int = 3
   ) -> list[TeamStatsOut]:
-    
-    result = await self._db.execute(select(Team).where(Team.active == True))  # noqa: E712
-    teams = result.scalars().all()  # noqa: F841
 
-    stats = [] # List / Matriz / Array  # noqa: F841
+    ranking_sql = text("""
+      SELECT
+          team.initials,
+          team.name,
+          team.confederation,
+          COUNT(DISTINCT t.tournament_id)               AS tournaments_played,
+          COUNT(CASE WHEN t.winner = team.name
+                THEN 1 END)                             AS titles,
+          COUNT(CASE WHEN t.runners_up = team.name
+                THEN 1 END)                             AS runner_ups,
+          COUNT(m.match_id)                              AS total_matches,
+          COUNT(CASE WHEN
+              (m.home_team_initials = team.initials AND m.home_goals > m.away_goals) OR
+              (m.away_team_initials = team.initials AND m.away_goals > m.home_goals)
+              THEN 1 END)                               AS wins,
+          COUNT(CASE WHEN m.home_goals = m.away_goals
+                THEN 1 END)                             AS draws,
+          COUNT(CASE WHEN
+              (m.home_team_initials = team.initials AND m.home_goals < m.away_goals) OR
+              (m.away_team_initials = team.initials AND m.away_goals < m.home_goals)
+              THEN 1 END)                               AS losses,
+          COALESCE(SUM(CASE
+              WHEN m.home_team_initials = team.initials THEN m.home_goals
+              ELSE m.away_goals
+          END), 0)                                      AS goals_scored,
+          COALESCE(SUM(CASE
+              WHEN m.home_team_initials = team.initials THEN m.away_goals
+              ELSE m.home_goals
+          END), 0)                                      AS goals_conceded
+      FROM teams team
+      LEFT JOIN matches m
+          ON m.home_team_initials = team.initials OR m.away_team_initials = team.initials
+      LEFT JOIN tournaments t
+          ON t.tournament_id = m.tournament_id
+      WHERE team.active = true
+      GROUP BY team.initials, team.name, team.confederation
+      HAVING COUNT(m.match_id) >= :min_matches
+    """)
 
-    for team in teams:
-      try:
-        s = await self.get_team_stats(team.initials)
-        if s.total_matches >= min_matches:
-          stats.append(s)
-      except NotFoundError:
-        continue
+    rows = (await self._db.execute(ranking_sql, {"min_matches": min_matches})).all()
+
+    stats = []
+    for row in rows:
+      goals_scored   = row.goals_scored   or 0
+      goals_conceded = row.goals_conceded or 0
+      total          = row.total_matches  or 0
+      wins           = row.wins           or 0
+
+      stats.append(TeamStatsOut(
+        initials=row.initials,
+        name=row.name,
+        confederation=row.confederation,
+        tournaments_played=row.tournaments_played or 0,
+        titles=row.titles          or 0,
+        runner_ups=row.runner_ups  or 0,
+        total_matches=total,
+        wins=wins,
+        draws=row.draws            or 0,
+        losses=row.losses          or 0,
+        goals_scored=goals_scored,
+        goals_conceded=goals_conceded,
+        goal_difference=goals_scored - goals_conceded,
+        win_rate_pct=round((wins / total * 100), 2) if total else 0.0,
+      ))
 
     key_map = {
-      "titles":lambda s:s.titles,
-      "wins":lambda s:s.wins,
-      "goals_scored":lambda s:s.goals_scored,
-      "total_matches":lambda s:s.total_matches,
+      "titles": lambda s: s.titles,
+      "wins": lambda s: s.wins,
+      "goals_scored": lambda s: s.goals_scored,
+      "total_matches": lambda s: s.total_matches,
     }
 
-    return sorted(stats, key=key_map.get(sort_by, lambda s:s.titles), reverse=True)
+    return sorted(stats, key=key_map.get(sort_by, lambda s: s.titles), reverse=True)
 
   # === [CRUD] - Create a new Team / Selección === #
   async def create_team(self, data_team: TeamIn) -> TeamOut:
@@ -200,58 +252,50 @@ class TeamService:
 
 
 
-  async def head_to_head(self, initials_a:str, initials_b:str) -> HeadToHeadOut: 
+  async def head_to_head(self, initials_a:str, initials_b:str) -> HeadToHeadOut:
     """ Confrontar & Comparar entre Selecciones | SQL:Todos los Parámetros (HeadToHeadOut)"""
     await self._get_team(initials_a)
     await self._get_team(initials_b)
     # = SQL/Postgres = #
-    query = text(
-      """
-        SELECT 
+    query = text("""
+        SELECT
           COUNT(*)                                                  AS total_matches,
-          MIN(year)                                                 AS first_encounter, 
-          MAX(year)                                                 AS last_encounter, 
-          COUNT(
-            CASE WHEN 
-              (home_team_initials = :a AND home_goals > away_goals) 
-              OR 
-              (away_team_initials = :a AND away_goals > home_goals)
-              THEN 1 END
-              )                                                     AS team_a_wins,
-          COUNT(
-            CASE WHEN
-              (home_team_initials = :b AND home_goals > away_goals)
-              OR 
-              (away_team_initials = :b AND away_goals > home_goals)
-              THEN 1 END
-              )                                                     AS team_b_wins,
-          COUNT(CASE WHEN home_goals = away_goals THEN 1 END)       AS draws,
-          SUM(CASE WHEN home_team_initials :a 
-              THEN home_goals ELSE away_goals END
-          )                                                         AS team_a_goals,
-          SUM(CASE WHEN away_team_initials :b
-            THEN away_goals  ELSE home_goals  
-          )                                                         AS team_b_goals,
-
-          FROM matches 
-          WHERE 
-            (home_team_initials = :a AND away_team_initials :b)
-            OR 
-            (home_team_initials = :b AND away_team_initials :b)
-      """
-    )
+          MIN(m.year)                                               AS first_encounter,
+          MAX(m.year)                                               AS last_encounter,
+          COUNT(CASE WHEN
+            (m.home_team_initials = :a AND m.home_goals > m.away_goals) OR
+            (m.away_team_initials = :a AND m.away_goals > m.home_goals)
+            THEN 1 END)                                             AS team_a_wins,
+          COUNT(CASE WHEN
+            (m.home_team_initials = :b AND m.home_goals > m.away_goals) OR
+            (m.away_team_initials = :b AND m.away_goals > m.home_goals)
+            THEN 1 END)                                             AS team_b_wins,
+          COUNT(CASE WHEN m.home_goals = m.away_goals THEN 1 END)  AS draws,
+          COALESCE(SUM(CASE
+            WHEN m.home_team_initials = :a THEN m.home_goals
+            ELSE m.away_goals
+          END), 0)                                                  AS team_a_goals,
+          COALESCE(SUM(CASE
+            WHEN m.home_team_initials = :b THEN m.home_goals
+            ELSE m.away_goals
+          END), 0)                                                  AS team_b_goals
+        FROM matches m
+        WHERE
+          (m.home_team_initials = :a AND m.away_team_initials = :b) OR
+          (m.home_team_initials = :b AND m.away_team_initials = :a)
+    """)
     # = Filas = #
-    row = (await self._db.execute(query, {"a": initials_a.upper(), "b": initials_b.upper()})).one()  # noqa: F841
+    row = (await self._db.execute(query, {"a": initials_a.upper(), "b": initials_b.upper()})).one()
 
     return HeadToHeadOut(
-      team_a=initials_a.upper(), 
+      team_a=initials_a.upper(),
       team_b=initials_b.upper(),
-      total_matches=row.total_matches or 0,  
+      total_matches=row.total_matches or 0,
       team_a_wins=row.team_a_wins or 0,
       team_b_wins=row.team_b_wins or 0,
-      draws=row.draw or 0, 
-      team_a_goals=row.team_a_goals or 0, 
-      team_b_goals=row.team_b_goals or 0, 
+      draws=row.draws or 0,
+      team_a_goals=row.team_a_goals or 0,
+      team_b_goals=row.team_b_goals or 0,
       first_encounter=row.first_encounter or 0,
       last_encounter=row.last_encounter or 0,
     )

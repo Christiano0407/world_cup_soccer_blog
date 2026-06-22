@@ -1,14 +1,8 @@
 # === Auth === #
 RegisterIn:
   type: object
-  required: [fullname, email, password]
+  required: [email, password]
   properties:
-    fullname: 
-      type: string
-      minLength: 4
-      maxLength: 50
-      example: "Luisa Natalia Cantú Ramírez"
-      description: "Mínimo de caracteres para el Nombre del Usuario es: 4"
     email: 
       type: string
       format: email
@@ -29,16 +23,16 @@ LoginIn:
   type: object
   required: [email, password]
   properties:
-    email: {type: string, format: email, example: "LuigiLove0407Fan"}
+    email: {type: string, format: email, example: "luigi@example.com"}
     password: {type: string, example: "luigiFanFest0407"}
 
 TokenOut: 
   type: object
-  required: [access_token, token_type, expire_in]
+  required: [access_token, token_type, expires_in]
   properties:
     access_token: { type: string, example: "eyJhbGciOiJIUzI1NiIs..." }
     token_type: { type: string, example: "bearer" }
-    expire_in: { type: integer, example: 1800, description: "Segundos(Seconds)" }
+    expires_in: { type: integer, example: 1800, description: "Segundos(Seconds)" }
 
 UserOut: 
   type: object

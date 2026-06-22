@@ -7,7 +7,7 @@ TournamentOut:
     year:             { type: integer, example: 1930 }
     host_country:     { type: string, example: "Uruguay" }
     winner:           { type: string, example: "Uruguay" }
-    runner_ups:       { type: string, example: "Argentina" }
+    runners_up:       { type: string, example: "Argentina" }
     third_place:      { type: string, nullable: true, example: "USA" }
     fourth_place:     { type: string, nullable: true, example: "Yugoslavia" }
     goals_scored:     { type: integer, example: 70 }
@@ -33,7 +33,7 @@ TournamentIn:
     year:             { type: integer, minimum: 1930, maximum: 2030 }
     host_country:     { type: string, maxLength: 100}
     winner:           { type: string, maxLength: 100 }
-    runner_ups:       { type: string, maxLength: 100 }
+    runners_up:       { type: string, maxLength: 100 }
     third_place:      { type: string, nullable: true }
     fourth_place:     { type: string, nullable: true }
     goals_scored:     { type: integer, minimum: 0}
@@ -45,6 +45,6 @@ TournamentUpdate:
   type: object
   properties:
     winner:           { type: string, nullable: true }
-    runner_ups:       { type: string, nullable: true }
+    runners_up:       { type: string, nullable: true }
     goals_scored:     { type: integer, minimum: 0, nullable: true }
     attendance_total: { type: integer, nullable: true }
