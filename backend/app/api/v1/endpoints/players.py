@@ -85,3 +85,19 @@ async def players_top_scorers(
   return await service_players.get_top_scorers(top=top, team=team, position=position)
 
 # ─── GET /players/{name}/career ─────────────────────────────────────────────────────────────
+@router.get("/{name}/career", 
+            response_model=PlayerCareerOut, 
+            summary="Historial de rendimiento de un jugador dentro del Mundial (partido)",
+            )
+async def player_career(
+  name: str, 
+  service_players : PlayerService = Depends(get_player_service)  # noqa: B008
+) -> PlayerCareerOut:
+  """
+    Retorna el historial completo de carrera mundialista de un jugador.
+    La búsqueda es **case-insensitive**.
+ 
+    - **200**: Stats acumuladas del jugador en todos sus Mundiales.
+    - **404**: Jugador no encontrado.
+  """
+  return await service_players.get_player_career(name=name)
