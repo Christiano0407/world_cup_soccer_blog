@@ -24,6 +24,7 @@
 - [Troubleshooting — Errores Conocidos](#troubleshooting--errores-conocidos)
 - [Project Structure](#project-structure)
 - [Backend API — FastAPI](#backend-api--fastapi)
+- [Backend API — Bug Fixes & Refactoring](#backend-api--bug-fixes--refactoring)
 - [Implementation Status](#implementation-status)
 - [Roadmap](#roadmap)
 - [Licencia](#licencia)
@@ -592,7 +593,8 @@ if match_dt is None:
 │   │   ├── schemas/
 │   │   │   └── schemas.py          # Pydantic v2 request/response schemas
 │   │   ├── services/               # Business logic layer
-│   │   │   ├── auth.py             # (pending)
+│   │   │   ├── auth.py             # Auth lifecycle (register, login, refresh, logout)
+│   │   │   ├── teams.py            # Team CRUD + stats + head-to-head
 │   │   │   ├── domain.py           # (pending)
 │   │   │   └── admin.py            # (pending)
 │   │   └── main.py                 # FastAPI entry point (pending)
@@ -732,6 +734,116 @@ Request ──▶ nginx (proxy) ──▶ FastAPI ──▶ Middleware ──▶
 
 ---
 
+## Backend API — Bug Fixes & Refactoring
+
+Esta sección documenta las correcciones aplicadas al backend durante la fase de revisión de la API REST. Cada cambio incluye el **problema detectado**, la **causa raíz** y la **decisión de diseño** adoptada.
+
+### 1. Capa de Seguridad — Excepciones de Dominio
+
+| Aspecto | Detalle |
+|---------|---------|
+| **Archivo** | `app/core/security.py` |
+| **Problema** | Las funciones `decode_token()`, `_get_current_user()`, `require_roles()` y `get_refresh_token_from_cookies()` lanzaban `HTTPException` y `status` de FastAPI directamente desde la capa de seguridad. |
+| **Causa** | Mezcla de responsabilidades: la capa de seguridad (core) no debe conocer detalles HTTP/FastAPI. |
+| **Decisión** | Reemplazar todas las `HTTPException` por `AuthenticationError` y `AuthorizationError` (excepciones propias del dominio definidas en `app/core/exceptions.py`). Los exception handlers registrados en `main.py` serán los encargados de traducirlas a `HTTPException` en la capa de presentación. |
+| **Resultado** | `security.py` queda limpio de imports de FastAPI (`HTTPException`, `status`). Separación de capas respetada. |
+
+### 2. Paths Duplicados — Uso Correcto de `prefix`
+
+| Aspecto | Detalle |
+|---------|---------|
+| **Archivos** | `endpoints/teams.py`, `matches.py`, `tournaments.py`, `players.py` |
+| **Problema** | Los routers declaraban rutas absolutas dentro de un `APIRouter` con `prefix`. Por ejemplo: `@router.get("/teams")` combinado con `prefix="/teams"` producía `/teams/teams`. |
+| **Causa** | Desconocimiento de que FastAPI concatena `prefix` + `@router` path. |
+| **Decisión** | Usar `@router.get("/")` en todos los routers que tienen `prefix` definido. Esto produce la ruta canónica esperada (`/teams`, `/matches`, etc.). |
+| **Correcciones aplicadas** |
+
+| Router | Prefix | Antes | Después |
+|--------|--------|-------|---------|
+| `teams.py` | `/teams` | `@router.get("/teams")`, `@router.post("/teams")` | `@router.get("/")`, `@router.post("/")` |
+| `matches.py` | `/matches` | `@router.get("/matches")` | `@router.get("/")` |
+| `tournaments.py` | `/tournaments` | `@router.get("/tournaments")`, `@router.post("/tournaments")` | `@router.get("/")`, `@router.post("/")` |
+| `players.py` | `/players` | `@router.get("/players")`, `@router.get("/players/search")` | `@router.get("/")`, `@router.get("/search")` |
+
+Además, `players.py` tenía `prefix="players"` sin la barra inicial → corregido a `prefix="/players"`.
+
+### 3. Endpoints — Decorators y Dependencias de Autenticación
+
+| Aspecto | Detalle |
+|---------|---------|
+| **Archivo** | `endpoints/matches.py`, `tournaments.py` |
+| **Problema** | Varios decoradores `router.get(...)` y `router.post(...)` estaban escritos sin el símbolo `@`, lo que los convertía en código muerto. Además, los endpoints `PATCH` y `DELETE` de torneos usaban `Depends(get_tournament_service)` en lugar de las dependencias de autorización correctas. |
+| **Decisión** | Agregar `@` faltante y asignar las dependencias de autorización según el método HTTP: |
+
+| Endpoint | Antes | Después |
+|----------|-------|---------|
+| `GET /matches/search` | `router.get(...)` (sin `@`) | `@router.get(...)` |
+| `GET /matches/{match_id}` | `router.get(...)` (sin `@`) | `@router.get(...)` |
+| `GET /matches/{match_id}/players` | `@router.get("{match_id}/players"` | `@router.get("/{match_id}/players"` |
+| `PATCH /tournaments/{year}` | `Depends(get_tournament_service)` | `Depends(require_editor_or_admin)` |
+| `DELETE /tournaments/{year}` | `Depends(get_tournament_service)` | `Depends(require_admin)` |
+| `GET /tournaments/{year}/matches` | `@router.get("{year}/matches"` | `@router.get("/{year}/matches"` |
+| `GET /tournaments/{year}/top-scorers` | `@router.get("{year}/top-scorers"` | `@router.get("/{year}/top-scorers"` |
+
+### 4. SQL — Head-to-Head Query
+
+| Aspecto | Detalle |
+|---------|---------|
+| **Archivo** | `services/teams.py` — método `head_to_head()` |
+| **Problema** | La consulta SQL contenía errores de sintaxis (`:` sin `=` en condiciones), alias incorrectos (`row.draw` → inexistente, debía ser `row.draws`), y valores `None` en sumas de goles (falta `COALESCE`). |
+| **Decisión** | Reescribir la consulta completa: agregar `COALESCE` en todos los `SUM`, cambiar alias a `draws`, agregar condición de equipo visitante en el `WHERE`. |
+| **Resultado** | La query ahora retorna datos correctos para ambos lados de la comparación (home/away). |
+
+### 5. Auth Service — Errores en Refresh y Logout
+
+| Archivo | Línea | Problema | Corrección |
+|---------|-------|----------|------------|
+| `services/auth.py` | 211 | `expires_in` usaba `JWT_REFRESH_TOKEN_EXPIRE_DAYS * 60` (días convertidos a minutos) → valor incorrecto. El access token expira en minutos, no en días. | Cambiado a `JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60` |
+| `services/auth.py` | 219 | `f"revoked_refresh{bearer_jti}"` — faltaban los dos puntos antes del JTI, produciendo claves Redis como `revoked_refreshabc123` en vez de `revoked_refresh:abc123`. | Corregido a `f"revoked_refresh:{bearer_jti}"` |
+
+**Decisión:** El `expires_in` del `TokenOut` debe reflejar la vida útil del access token (minutos), no del refresh token (días). La clave Redis sigue el patrón `revoked_refresh:{jti}` para consistencia con el resto del sistema.
+
+### 6. N+1 Query — Optimización de Ranking
+
+| Aspecto | Detalle |
+|---------|---------|
+| **Archivo** | `services/teams.py` — método `get_ranking()` |
+| **Problema** | El método ejecutaba un `SELECT` para obtener todos los equipos activos y luego iteraba llamando `get_team_stats()` para **cada uno** (N+1 queries). Con 80+ equipos, esto producía 81 queries a PostgreSQL. |
+| **Decisión** | Reemplazar el loop N+1 por una **única consulta SQL** que usa `LEFT JOIN` entre `teams`, `matches` y `tournaments` con `GROUP BY team.initials, team.name, team.confederation` y filtro `HAVING COUNT(m.match_id) >= min_matches`. |
+| **Resultado** | **81 → 1 consulta**. Reducción del 98.8% en viajes a la base de datos. La lógica de ordenamiento (`sort_by`) se mantiene en Python. |
+
+### 7. Schemas — Alineación ORM ↔ Pydantic
+
+| Aspecto | Detalle |
+|---------|---------|
+| **Archivos** | `schemas/schemas.py` ↔ `models/orm.py` |
+| **Problema** | El modelo Pydantic `UserOut` declaraba `updated_at: datetime`, pero el modelo ORM `User` tiene el campo `update_at` (sin `d`). Esto provocaba un `ValueError` silencioso en `model_validate()` porque `from_attributes=True` no encontraba el atributo `updated_at` en el ORM. |
+| **Decisión** | Alinear el nombre del campo Pydantic con la definición real del ORM: `updated_at` → `update_at`. La fuente de verdad es el modelo de base de datos. |
+| **Impacto** | `get_me()` y `update_me()` en `auth.py` pueden serializar correctamente el usuario sin errores de validación. |
+
+### 8. Correcciones Menores
+
+| Archivo | Línea | Problema | Corrección |
+|---------|-------|----------|------------|
+| `endpoints/teams.py` | 142 | `Query(ge=1, len=100)` — parámetro `len` inexistente en FastAPI | `len=100` → `le=100` (max length) |
+| `endpoints/admin.py` | — | `from core.security` — import relativo incorrecto | `from app.core.security` |
+| `endpoints/admin.py` | — | `g1=1` en `Query` — typo | `ge=1` |
+
+### 9. OpenAPI — Sincronización con Schemas Python
+
+Los archivos YAML en `openapi/components/schemas/` fueron corregidos para reflejar exactamente los schemas Pydantic (fuente de verdad):
+
+| Archivo YAML | Cambio |
+|--------------|--------|
+| `auth.yaml` | Eliminado `fullname` de `RegisterIn` (inexistente en Pydantic); corregido `expire_in` → `expires_in` en `TokenOut`; email example corregido en `LoginIn` |
+| `tournaments.yaml` | `runner_ups` → `runners_up` (3 ocurrencias) |
+| `teams.yaml` | `goals_difference` → `goal_difference` |
+| `admin.yaml` | `updated_at` → `update_at` (coincide con ORM + Pydantic) |
+
+**Decisión:** Los schemas Python (Pydantic) son la fuente de verdad. El YAML se sincroniza contra ellos, no al revés. Esto evita derivas entre la especificación OpenAPI y el código en ejecución.
+
+---
+
 ## Implementation Status
 
 Estado actual de cada componente del backend:
@@ -758,30 +870,32 @@ Estado actual de cada componente del backend:
 | Component schemas (YAML) | ✅ 7 archivos (admin, auth, matches, players, shared, teams, tournaments) |
 | Path definitions | ✅ 7 archivos |
 
-### Pending Implementation (🔴 Por Implementar)
+### Implementation Status — Backend
 
-| Componente | Prioridad | Archivo(s) |
-|------------|-----------|------------|
-| App entry point (`main.py`) | **Crítica** | `app/main.py` |
-| Auth endpoints | **Crítica** | `app/api/v1/endpoints/auth.py` |
-| Health endpoint | **Crítica** | `app/api/v1/endpoints/health.py` |
-| Teams endpoints | **Alta** | `app/api/v1/endpoints/teams.py` |
-| Tournaments endpoints | **Alta** | `app/api/v1/endpoints/tournaments.py` |
-| Matches endpoints | **Alta** | `app/api/v1/endpoints/matches.py` |
-| Players endpoints | **Alta** | `app/api/v1/endpoints/players.py` |
-| Analytics endpoints | **Alta** | `app/api/v1/endpoints/analytics.py` |
-| Admin endpoints | **Alta** | `app/api/v1/endpoints/admin.py` |
-| Auth service | **Alta** | `app/services/auth.py` |
-| Domain service | **Alta** | `app/services/domain.py` |
-| Admin service | **Alta** | `app/services/admin.py` |
-| `__init__.py` exports | **Alta** | Todos los `__init__.py` |
-| Dockerfile | **Media** | `backend/Dockerfile` |
-| `docker-compose.yml` — backend service | **Media** | `docker-compose.yml` |
-| `alembic.ini` + migrations | **Media** | `alembic.ini` |
-| `scripts/seed.py` | **Media** | `backend/scripts/seed.py` |
-| `scripts/etl.py` | **Media** | `backend/scripts/etl.py` |
-| Unit tests | **Alta** | `backend/tests/unit/` |
-| Integration tests | **Alta** | `backend/tests/integration/` |
+| Componente | Estado | Archivo(s) |
+|------------|--------|------------|
+| `main.py` — App FastAPI entry point | 🔴 Pendiente (bloqueante) | `app/main.py` |
+| Health endpoint | 🔴 Sin implementar | `app/api/v1/endpoints/health.py` |
+| Auth endpoints | 🟡 Escritos, sin conectar | `app/api/v1/endpoints/auth.py` |
+| Teams endpoints | 🟢 Implementados + corregidos | `app/api/v1/endpoints/teams.py` |
+| Tournaments endpoints | 🟢 Implementados + corregidos | `app/api/v1/endpoints/tournaments.py` |
+| Matches endpoints | 🟢 Implementados + corregidos | `app/api/v1/endpoints/matches.py` |
+| Players endpoints | 🟢 Implementados + corregidos | `app/api/v1/endpoints/players.py` |
+| Admin endpoints | 🟢 Implementados + corregidos | `app/api/v1/endpoints/admin.py` |
+| Analytics endpoints | 🔴 Sin implementar | `app/api/v1/endpoints/analytics.py` |
+| Auth service | 🟢 Implementado + corregido | `app/services/auth.py` |
+| Teams service | 🟢 Implementado + optimizado | `app/services/teams.py` |
+| Domain service | 🔴 Sin implementar | `app/services/domain.py` |
+| Admin service | 🔴 Sin implementar | `app/services/admin.py` |
+| OpenAPI schemas (YAML) | 🟢 Sincronizados con Python | `openapi/components/schemas/*.yaml` |
+| `__init__.py` exports | 🔴 Pendiente | Todos los `__init__.py` |
+| Dockerfile | 🔴 Pendiente | `backend/Dockerfile` |
+| `docker-compose.yml` — backend service | 🔴 Pendiente | `docker-compose.yml` |
+| Alembic + migrations | 🔴 Pendiente | `alembic.ini` |
+| `scripts/seed.py` / `etl.py` | 🔴 Pendiente | `backend/scripts/` |
+| Unit tests | 🔴 Pendiente | `backend/tests/unit/` |
+| Integration tests | 🔴 Pendiente | `backend/tests/integration/` |
+| E2E tests | 🔴 Pendiente | `backend/tests/e2e/` |
 | E2E tests | **Media** | `backend/tests/e2e/` |
 | CI/CD workflows | **Media** | `.github/workflows/` |
 
@@ -810,12 +924,15 @@ Estado actual de cada componente del backend:
 - [x] Core backend (config, security, DB session, ORM, schemas, middleware)
 
 ### Fase 2 — API REST ⏳
-- [ ] `main.py` — App FastAPI + registro de routers/middleware/exception handlers
+- [ ] `main.py` — App FastAPI + registro de routers/middleware/exception handlers (bloqueante)
 - [ ] Endpoints de Health + Auth (register, login, refresh, logout, me)
-- [ ] Endpoints de Teams, Tournaments, Matches, Players
+- [x] Endpoints de Teams, Tournaments, Matches, Players (implementados, esperando `main.py`)
 - [ ] Endpoints de Analytics
-- [ ] Endpoints de Admin (CRUD usuarios, trigger ETL)
-- [ ] Servicios (auth, domain, admin)
+- [x] Endpoints de Admin (CRUD usuarios, trigger ETL) (implementados, esperando `main.py`)
+- [x] Servicios (auth, teams implementados)
+- [ ] Servicios (domain, admin pendientes)
+- [x] Bug fixes y refactoring realizados
+- [x] Schemas OpenAPI sincronizados con Python
 - [ ] `__init__.py` con exports
 
 ### Fase 3 — Infraestructura 🏗️
