@@ -66,6 +66,22 @@ async def players_search(
 
 
 # ─── GET /players/top-scorers ─────────────────────────────────────────────────────────────
-
+@router.get("/top-scorers", 
+            response_model=list[TopScorerOut], 
+            summary="Goleadores Históricos del Mundial/Torneo en la Historia",
+            )
+async def players_top_scorers(
+  top: int = Query(default=10, ge=1, le=50, description="Top (máximos) goleadores de todos los Mundiales (Torneo)"),  # noqa: E501
+  team: str | None = Query(default=None, max_length=3, description=" Filtrar por Iniciales FIFA"), 
+  position: Literal["GK", "DF", "MF", "FW"] | None = Query(default=None, description="Posición del Jugador | Player Position"),  # noqa: E501
+  service_players: PlayerService = Depends(get_player_service),  # noqa: B008
+) -> list[TopScorerOut]:
+  """
+    Retorna los máximos goleadores históricos de todos los Mundiales,
+    ordenados por goles descendente.
+ 
+    - **200**: Lista de goleadores.
+  """
+  return await service_players.get_top_scorers(top=top, team=team, position=position)
 
 # ─── GET /players/{name}/career ─────────────────────────────────────────────────────────────

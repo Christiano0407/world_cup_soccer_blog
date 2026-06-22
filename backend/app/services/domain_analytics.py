@@ -284,7 +284,7 @@ class PlayerService:
 
     async def get_top_scorers(
         self,
-        top: int = 20,
+        top: int = 10,
         team: str | None = None,
         position: str | None = None,
     ) -> list[TopScorerOut]:
