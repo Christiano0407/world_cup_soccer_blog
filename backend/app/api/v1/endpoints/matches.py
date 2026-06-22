@@ -63,7 +63,39 @@ async def matches_search(
 
 
 # ─── GET /matches/{match_id} ──────────────────────────────────────────────────
+router.get("/{match_id}", 
+           response_model=MatchOut, 
+           summary="Identificador único a detalle de un partido | Detalles Completos"
+           )
+async def matches_get(
+      match_id: int, 
+      match_service: MatchService = Depends(get_match_service),  # noqa: B008
+) -> MatchOut: 
+   """
+     Identificador único a detalle de un partido | Detalles Completos
+     Retorna el detalle completo de un partido por su ID (CSV original).
+ 
+    - **200**: Datos completos del partido incluyendo nombres de equipo.
+    - **404**: Partido no encontrado.
+   """
+   return await match_service.get_match(match_id)
 
 
 # ─── GET /matches/{match_id}/player ──────────────────────────────────────────
-
+@router.get("{match_id}/players",
+            response_model= list[PlayerAppearanceOut], 
+            summary="Plantillas (Jugadores) de ambas selecciones/equipos en un partido",
+            )
+async def matches_players(
+   match_id: int, 
+   match_service: MatchService = Depends(get_match_service),  # noqa: B008
+) -> list[PlayerAppearanceOut]:
+  """
+    Plantillas (Jugadores) de ambas selecciones/equipos en un partido
+    Retorna las plantillas (titulares + suplentes) con eventos de ambos
+    equipos en un partido.
+ 
+    - **200**: Lista de apariciones ordenada por equipo y dorsal.
+    - **404**: Partido no encontrado.
+  """
+  return await match_service.get_match_players(match_id)
