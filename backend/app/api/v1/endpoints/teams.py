@@ -30,7 +30,7 @@ router = APIRouter(prefix="/teams", tags=["Teams"])
 ## [Endpoints  - Routes | API REST]============================================================== ##
 
 # ─── GET /teams ───────────────────────────────────────────────────────────────
-@router.get("/teams", 
+@router.get("/", 
             status_code=status.HTTP_200_OK,
             summary="Listar (orden) todas las Selecciones de Fútbol",
             )
@@ -51,7 +51,7 @@ async def teams_list(
 
 # ─── POST /teams ──────────────────────────────────────────────────────────────
 @router.post(
-   "/teams", 
+   "/", 
    response_model=TeamOut,
    status_code=status.HTTP_201_CREATED,
    summary="Crear selección/equipo (admin)", 
@@ -110,7 +110,7 @@ async def get_team(initials:str,
 
 
 # ─── PATCH /teams/{initials} ──────────────────────────────────────────────────
-@router.get("/initials",
+@router.patch("/{initials}",
             response_model=TeamOut, 
             summary="Actualizar selección/equipo (admin) ",
             )
@@ -139,7 +139,7 @@ async def update_team(
 async def team_matches(
    initials: str, 
    page: int = Query(default=1, ge=1), 
-   page_size: int = Query(default=20, ge=1, len=100),
+   page_size: int = Query(default=20, ge=1, le=100),
    year: int | None = Query(default=None, ge=1930, le=2030), 
    stage: str | None = Query(default=None, description="Group Stage | Final | semi-final"), 
    team_service: TeamService = Depends(get_team_service),  # noqa: B008

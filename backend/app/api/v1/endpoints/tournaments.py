@@ -26,7 +26,7 @@ router = APIRouter(prefix="/tournaments", tags=["Tournaments"])
 
 # ─── GET /tournaments ─────────────────────────────────────────────────────────
 @router.get(
-  "/tournaments", 
+  "/", 
   response_model=Paginated[TournamentListOut], 
   status_code=status.HTTP_200_OK,
   summary="Listar todas las ediciones del Mundial (Torneo)",
@@ -50,7 +50,7 @@ async def list_tournaments(
 
 # ─── POST /tournaments ────────────────────────────────────────────────────────
 @router.post(
-  "/tournaments", 
+  "/", 
   response_model=TournamentOut, 
   status_code=status.HTTP_201_CREATED, 
   summary="Crear Ediciones (Torneo) - (admin)",
@@ -96,7 +96,7 @@ async def get_year_tournament(
 async def update_tournament(
   year: int, 
   data: TournamentUpdate, 
-  _:CurrentUser = Depends(get_tournament_service),  # noqa: B008
+  _:CurrentUser = Depends(require_editor_or_admin),  # noqa: B008
   tournament_service: TournamentService = Depends(get_tournament_service),  # noqa: B008
 ) -> TournamentOut:
   """
@@ -116,7 +116,7 @@ async def update_tournament(
 )
 async def delete_tournament(
   year: int, 
-  _:CurrentUser = Depends(get_tournament_service),  # noqa: B008
+  _:CurrentUser = Depends(require_admin),  # noqa: B008
   tournament_service: TournamentService = Depends(get_tournament_service),  # noqa: B008
 ) -> None:
   """
@@ -131,7 +131,7 @@ async def delete_tournament(
   await tournament_service.delete_tournament(year)
 
 # ─── GET /tournaments/{year}/matches ──────────────────────────────────────────
-@router.get("{year}/matches", 
+@router.get("/{year}/matches", 
             response_model=Paginated[MatchListOut], 
             status_code=status.HTTP_200_OK,
             summary=" Partidos jugados por edición (Torneo) | Por año",
@@ -156,7 +156,7 @@ async def tournament_matches(
 
 
 # ─── GET /tournaments/{year}/top-scorers ──────────────────────────────────────
-@router.get("{year}/top-scorers",
+@router.get("/{year}/top-scorers",
             response_model=list[TopScorerOut],
             summary="Top goleadores de una edición (Torneo | Mundial)",
             )

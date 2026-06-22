@@ -8,7 +8,7 @@ AdminUserOut:
     role:         { type: string, enum: [admin, editor, reader] }
     is_active:    { type: boolean }
     created_at:   { type: string, format: date-time }
-    updated_at:   { type: string, format: date-time }
+    update_at:   { type: string, format: date-time }
 
 AdminUserUpdate:
   type: object

@@ -25,7 +25,7 @@ TeamStatsOut:
     losses:         { type: integer, example: 3 }
     goals_scored:   { type: integer, example: 237 }
     goals_conceded: { type: integer, example: 101 }
-    goals_difference: { type: integer, example: 136 }
+    goal_difference: { type: integer, example: 136 }
     win_rate_pct:   { type: number, example: 66.67 }
 
 TeamIn:

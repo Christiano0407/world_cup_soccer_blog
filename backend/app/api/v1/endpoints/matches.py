@@ -18,7 +18,7 @@ from app.services.domain_analytics import MatchService
 router = APIRouter(prefix="/matches", tags=["Matches"])
 
 # ─── GET /matches ─────────────────────────────────────────────────────────────
-@router.get("/matches",
+@router.get("/",
             response_model=Paginated[MatchListOut], 
             summary="Listar partidos con filtros (Orden los partidos del Torneo/Mundial)",
              )
@@ -45,7 +45,7 @@ async def matches_list(
   )
 
 # ─── GET /matches/search  (debe ir ANTES de /{match_id}) ─────────────────────
-router.get("/search", 
+@router.get("/search", 
            response_model=list[MatchListOut], 
            summary="Búsqueda por texto libre (Buscar su País/Selección)",
            )
@@ -63,7 +63,7 @@ async def matches_search(
 
 
 # ─── GET /matches/{match_id} ──────────────────────────────────────────────────
-router.get("/{match_id}", 
+@router.get("/{match_id}", 
            response_model=MatchOut, 
            summary="Identificador único a detalle de un partido | Detalles Completos"
            )
@@ -82,7 +82,7 @@ async def matches_get(
 
 
 # ─── GET /matches/{match_id}/player ──────────────────────────────────────────
-@router.get("{match_id}/players",
+@router.get("/{match_id}/players",
             response_model= list[PlayerAppearanceOut], 
             summary="Plantillas (Jugadores) de ambas selecciones/equipos en un partido",
             )

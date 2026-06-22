@@ -208,7 +208,7 @@ class AuthService:
     # Type: Bearer
     return TokenOut(
       access_token=access_token, 
-      expires_in=self._settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 60
+      expires_in=self._settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
   
   
@@ -216,7 +216,7 @@ class AuthService:
   async def logout(self, user_id:str, bearer_jti:str | None, response: Response) -> None:
     if bearer_jti: 
       ttl = self._settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 60
-      await self._redis.setex(f"revoked_refresh{bearer_jti}", ttl, "1" )
+      await self._redis.setex(f"revoked_refresh:{bearer_jti}", ttl, "1" )
     _clear_refresh_cookies(response, self._settings)
 
   

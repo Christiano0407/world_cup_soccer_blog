@@ -13,7 +13,7 @@ import uuid
 from fastapi import APIRouter, Depends, Query, status 
 
 from app.api.v1.endpoints.deps import get_admin_service
-from core.security import CurrentUser, require_admin
+from app.core.security import CurrentUser, require_admin
 from app.schemas.schemas import (
   AdminUserOut, 
   AdminUserUpdate, 
@@ -34,7 +34,7 @@ router = APIRouter(prefix="admin", tags=["Admin"])
     summary="Listar (Ordenar) los usuario que tienen acceso & permisos (role)")
 async def list_users(
   page:int = Query(default=1, ge=1),
-  page_size: int = Query(default=20, g1=1, le=100), 
+  page_size: int = Query(default=20, ge=1, le=100), 
   role:str | None = Query(default=None, description="Filtrar por Rol: Admin | Editor | Reader"), 
   is_active: bool | None = Query(default=None, description="Filtrar por estado"), 
   _: CurrentUser=Depends(require_admin), 
