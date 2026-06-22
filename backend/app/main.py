@@ -3,3 +3,4 @@
   Health router — /api/health/*
   Main app entry point — FastAPI configuration + route registration.
 """
+
