@@ -12,7 +12,20 @@
       - name: team 
         in: query 
         schema:
-          { type: string, minLength: 3 }
+          { type: string, minLength: 2, maxLength: 3 }
+      - name: position
+        in: query
+        schema:
+          type: string
+          enum: [GK,DF,MF,FW]
+        description: "Posición del Jugador | Position Player"
+      - name: year
+        in: query
+        schema:
+          type: integer
+          minimum: 1930
+          maximum: 2030
+        description: "Filtrar por edición del Mundial"
     responses:
       "200": 
         description: Apariciones dentro del Torneo/Mundial & por Páginas
