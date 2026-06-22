@@ -19,7 +19,7 @@ PlayerCareerOut:
     team_initials:      { type: string } 
     total_appearances:  { type: integer }
     starts:             { type: integer }
-    substitution:       { type: integer }
+    substitutions:      { type: integer }
     goals:              { type: integer }
     yellow_cards:       { type: integer }
     red_cards:          { type: integer }
