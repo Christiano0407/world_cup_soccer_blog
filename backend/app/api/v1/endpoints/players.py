@@ -47,6 +47,22 @@ async def players_list(
   )
 
 # ─── GET /players/search ─────────────────────────────────────────────────────────────
+@router.get("/players/search", 
+            response_model= list[PlayerAppearanceOut], 
+            summary=" Búsqueda (search) de jugadores por nombre ",
+            )
+async def players_search(
+  q:str = Query(min_length=2, description="Nombre o parte del Nombre (Siglas) - Tolerante a acentos (pg_trgm)"),  # noqa: E501
+  limit: int = Query(default=10, ge=1, le=50),
+  service_players: PlayerService = Depends(get_player_service),  # noqa: B008
+) -> list[PlayerAppearanceOut]:
+  """
+    Búsqueda de jugadores por nombre usando `pg_trgm` (similitud fuzzy + ILIKE).
+    Tolerante a variaciones de acentos y errores tipográficos leves.
+ 
+    - **200**: Lista de apariciones únicas por jugador/equipo.
+  """
+  return await service_players.search_players(q_str=q, limit=limit)
 
 
 # ─── GET /players/top-scorers ─────────────────────────────────────────────────────────────

@@ -268,7 +268,7 @@ class PlayerService:
         pages = -(-total // page_size)
         return Paginated(items=items, total=total, page=page, page_size=page_size, pages=pages)
 
-    async def search_players(self, q_str: str, limit: int = 20) -> list[PlayerAppearanceOut]:
+    async def search_players(self, q_str: str, limit: int) -> list[PlayerAppearanceOut]:
         q = text("""
             SELECT DISTINCT ON (player_name, team_initials) *
             FROM player_appearances
