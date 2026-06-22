@@ -50,7 +50,7 @@ class Settings(BaseSettings):
   REFRESH_COOKIES_NAME: str = "refresh_token"
   REFRESH_COOKIE_PATH: str = "/api/v1/auth/refresh"
   REFRESH_COOKIE_HTTPONLY: bool = True
-  REFRESH_COOKIE_SECURE: bool = True
+  REFRESH_COOKIE_SECURE: bool = False
   REFRESH_COOKIE_SAMESITE: Literal["strict", "lax", "none"] = "lax"
 
   #! === CORS ( Conexión con Navegadores / Browser ) === #

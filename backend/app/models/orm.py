@@ -73,7 +73,7 @@ class User(Base):
   # ---- Revoked refresh token JTIs stored in Redis; model only stores last known ----
   refresh_jti: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
-  def __rep__(self) -> str: 
+  def __repr__(self) -> str: 
     return f"<User {self.display_name} - {self.email}  | role={self.role}"
 
 
@@ -105,7 +105,7 @@ class Team(Base):
     "Match", foreign_keys="Match.away_team_initials", back_populates="away_team"
   )
 
-  def __rep__(self) -> str: 
+  def __repr__(self) -> str: 
     return f"<Team {self.initials}"
   
 
@@ -133,7 +133,7 @@ class Tournaments(Base):
       return round(self.goals_scored / self.matches_played, 2)
     return None
   
-  def __rep__(self) -> str: 
+  def __repr__(self) -> str: 
       return f"<Tournament Year: {self.year} | Winner: {self.winner}"
 
 class Match(Base): 
