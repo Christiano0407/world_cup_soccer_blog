@@ -224,7 +224,6 @@ class MatchListOut(BaseModel):
 
 class PlayerAppearanceOut(BaseModel): 
   model_config = ConfigDict(from_attributes=True) # Connect To ORM
-
   player_match_id: int
   match_id: int
   team_initials: str

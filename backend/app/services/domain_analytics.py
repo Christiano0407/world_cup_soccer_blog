@@ -260,7 +260,7 @@ class PlayerService:
         if year:
             q = q.join(Match).where(Match.year == year)
 
-        total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar() or 0
+        total = (await self._db.execute(select(func.count()).select_from(q.subquery()))).scalar() or 0  # noqa: E501
         q = q.offset((page - 1) * page_size).limit(page_size)
         result = await self._db.execute(q)
 

@@ -22,7 +22,29 @@ router = APIRouter(prefix="players", tags=["Players"])
 
 
 # ─── GET /players ─────────────────────────────────────────────────────────────
-
+@router.get("/players", 
+            response_model=Paginated[PlayerAppearanceOut],
+            summary=" Listar (orden) apariciones de jugadores (dentro del Mundial/Torneo). Agregamos filtros"  # noqa: E501
+            )
+async def players_list(
+  page: int = Query(default=1, ge=1), 
+  page_size: int = Query(default=20, ge=1, le=100),
+  team: str | None = Query(default=None, min_length=2, max_length=3, description="Iniciales FIFA del Equipo / Selección"),  # noqa: E501
+  position: Literal["GK", "DF", "MF", "FW"] | None = Query(default=None, description="Posición del Jugador | Player Position"),  # noqa: E501
+  year: int | None = Query(default=None, ge=1930, le=2030, description="Edición del Mundial | Mundial Edition"),  # noqa: E501
+  service_players: PlayerService = Depends(get_player_service),  # noqa: B008
+) -> Paginated[PlayerAppearanceOut]: 
+  """
+    Lista apariciones de jugadores en partidos del Mundial con filtros opcionales.
+    - **200**: Lista paginada de apariciones.
+  """
+  return await service_players.list_appearances(
+    page=page, 
+    page_size=page_size, 
+    team=team, 
+    position=position, 
+    year=year,
+  )
 
 # ─── GET /players/search ─────────────────────────────────────────────────────────────
 
