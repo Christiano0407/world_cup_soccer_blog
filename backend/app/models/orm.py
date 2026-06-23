@@ -170,7 +170,7 @@ class Match(Base):
     "Team", foreign_keys=[away_team_initials], back_populates="away_matches"
   )
   player_appearances: Mapped[list[PlayerAppearance]] = relationship(
-    "PlayerAppearance", back_populates="matches"
+    "PlayerAppearance", back_populates="match"
   )
 
   def __repr__(self) -> str:
@@ -182,7 +182,7 @@ class PlayerAppearance(Base):
   
   player_match_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
   match_id: Mapped[int] = mapped_column(
-    Integer, ForeignKey("Matches.match_id", ondelete="CASCADE"), nullable=False, 
+    Integer,     ForeignKey("matches.match_id", ondelete="CASCADE"), nullable=False,  
     index=True
   )
   team_initials: Mapped[str] = mapped_column(String(3), nullable=False)
