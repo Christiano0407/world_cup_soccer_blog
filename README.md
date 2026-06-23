@@ -21,6 +21,7 @@
 - [Ejecutar Pipeline ETL](#ejecutar-pipeline-etl)
 - [Ejecutar Tests](#ejecutar-tests)
 - [Test Architecture](#test-architecture)
+- [Backend Tests — Arquitectura / Mapa Maestro](#backend-tests--arquitectura--mapa-maestro)
 - [Troubleshooting — Errores Conocidos](#troubleshooting--errores-conocidos)
 - [Project Structure](#project-structure)
 - [Backend API — FastAPI](#backend-api--fastapi)
@@ -475,6 +476,118 @@ per-file-ignores = { "tests/**" = ["S101", "ANN201", "ANN001", "ANN202"] }
 
 - `S101` permitido en tests — `assert` es correcto en contexto de test
 - `ANN201`, `ANN001`, `ANN202` permitidos en tests — type annotations en tests añaden ruido sin beneficio
+
+---
+
+## Backend Tests — Arquitectura / Mapa Maestro
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          TEST PIPELINE — BACKEND (FastAPI)                       │
+│                          165 tests · 0 failures · 68% coverage                   │
+│                                                                                  │
+│  Capas de prueba (bottom-up):                                                    │
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐ │
+│  │  L1 — SEGURIDAD  (core/security.py)                                        │ │
+│  │                                                                             │ │
+│  │  tests/unit/security/                                                       │ │
+│  │  ├── test_hashing.py       bcrypt real   · 7 tests  (hash, verify, unicode) │ │
+│  │  ├── test_jwt.py           jose real     · 10 tests (create, decode, claims)│ │
+│  │  └── test_dependencies.py  MagicMock     · 12 tests (get_current_user,      │ │
+│  │                                       require_roles, refresh_token cookies) │ │
+│  └─────────────────────────────────────────────────────────────────────────────┘ │
+│                                      │                                            │
+│                                      ▼                                            │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐ │
+│  │  L2 — SCHEMAS  (schemas/schemas.py)                                        │ │
+│  │                                                                             │ │
+│  │  tests/unit/schemas/                                                        │ │
+│  │  └── test_validators.py     14 tests  (RegisterIn, TeamIn, TournamentIn,    │ │
+│  │                               UserOut, ChangePasswordIn, edge cases)        │ │
+│  └─────────────────────────────────────────────────────────────────────────────┘ │
+│                                      │                                            │
+│                                      ▼                                            │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐ │
+│  │  L3 — SERVICIOS  (services/*.py)  · con mocks de DB + Redis                │ │
+│  │                                                                             │ │
+│  │  tests/unit/services/                                                       │ │
+│  │  ├── test_auth_service.py       12 tests  (register, login, refresh,        │ │
+│  │  │                                         logout, get_me, update_me,       │ │
+│  │  │                                         change_password)                 │ │
+│  │  ├── test_teams_service.py      8 tests   (CRUD, stats, head_to_head,       │ │
+│  │  │                                         ranking, matches)                │ │
+│  │  ├── test_tournament_service.py 8 tests   (CRUD, scorers, teams)            │ │
+│  │  ├── test_match_service.py      5 tests   (list, search, get, players)      │ │
+│  │  ├── test_player_service.py     5 tests   (list, search, scorers, career)   │ │
+│  │  └── test_admin_service.py      9 tests   (CRUD users, ETL trigger,         │ │
+│  │                                            etl_status, dead_letters,        │ │
+│  │                                            refresh_warehouse, audit_log)    │ │
+│  └─────────────────────────────────────────────────────────────────────────────┘ │
+│                                      │                                            │
+│                                      ▼                                            │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐ │
+│  │  L0 — INFRAESTRUCTURA DE TEST  (tests/conftest.py + factories.py)          │ │
+│  │                                                                             │ │
+│  │  conftest.py                                                                  │ │
+│  │  ├── MockResult       Simula SQLAlchemy Result (scalar_one_or_none,        │ │
+│  │  │                      scalars, mappings, all, one)                         │ │
+│  │  ├── MockRow          Fila con acceso por atributo + ._asdict() + **row    │ │
+│  │  ├── MockScalars      Simula Result.scalars()                              │ │
+│  │  ├── MockMappings     Simula Result.mappings()                             │ │
+│  │  └── mock_db          MagicMock(AsyncSession) con auto-asignación de PK    │ │
+│  │                       flush → team_id, tournament_id, match_id, etc.       │ │
+│  │                                                                             │ │
+│  │  factories.py  (factory_boy para schemas Pydantic)                         │ │
+│  │  └── UserOutFactory, TeamOutFactory, TournamentOutFactory, MatchOutFactory, │ │
+│  │      PlayerAppearanceOutFactory, TopScorerOutFactory, HeadToHeadOutFactory  │ │
+│  │                                                                             │ │
+│  │  mocks.py  (Mock*Service para futuros tests de integración)                 │ │
+│  │  └── MockAuthService, MockTeamService, MockTournamentService,               │ │
+│  │      MockMatchService, MockPlayerService, MockAdminService                 │ │
+│  └─────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                  │
+│  Dependencias externas:                                                          │
+│    pytest          · pytest-asyncio   · factory-boy    · python-jose (real)      │
+│    passlib[bcrypt] · bcrypt (real)    · MagicMock/AsyncMock                      │
+│                                                                                  │
+│  NO mockeados:  JWT (jose real) · bcrypt (hash real)                            │
+│  SÍ mockeados:  DB (AsyncSession) · Redis (AsyncMock)                           │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Comandos Principales
+
+```bash
+# Directorio de trabajo (backend)
+cd backend
+
+# ── Ejecutar todos los tests ─────────────────────────────────────────
+uv run pytest tests/ -v
+
+# ── Ejecutar por capa ────────────────────────────────────────────────
+uv run pytest tests/unit/security/ -v          # Seguridad (29 tests)
+uv run pytest tests/unit/schemas/ -v           # Schemas (14 tests)
+uv run pytest tests/unit/services/ -v          # Servicios (47 tests)
+
+# ── Ejecutar por archivo ─────────────────────────────────────────────
+uv run pytest tests/unit/security/test_jwt.py -v
+uv run pytest tests/unit/services/test_auth_service.py -v
+
+# ── Con cobertura ────────────────────────────────────────────────────
+uv run pytest tests/ -v --cov=app --cov-report=term-missing
+
+# ── Lint + format ────────────────────────────────────────────────────
+uv run ruff check app/ tests/ && uv run ruff format app/ tests/
+
+# ── Type check ───────────────────────────────────────────────────────
+uv run mypy app/
+```
+
+```bash
+# Resultado actual:
+# 165 passed · 0 failed · 68% coverage (app core: 91-100%)
+```
 
 ---
 
