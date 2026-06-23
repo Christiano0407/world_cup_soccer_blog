@@ -98,6 +98,51 @@ services:
         - data_world_network
     command: ["uv", "run", "fifa-worker", "--all"]
 
+  redis:
+    image: redis:7-alpine
+    container_name: data_world_redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - data_world_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: data_world_backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-CHANGE_ME_IN_PRODUCTION_use_32+_random_chars}
+      ENVIRONMENT: development
+      STORAGE_ENDPOINT: minio:9000
+      STORAGE_ACCESS_KEY: ${S3_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${S3_SECRET_KEY}
+      CORS_ORIGIN: '["http://localhost:3000","http://localhost:5173","http://localhost:8080"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - data_world_network
+    restart: unless-stopped
+
   nginx:
     build:
       context: ./infra/nginx
@@ -105,6 +150,9 @@ services:
     container_name: data_world_nginx
     ports:
       - "8080:80"
+    depends_on:
+      backend:
+        condition: service_started
     networks:
       - data_world_network
     healthcheck:
@@ -122,3 +170,4 @@ networks:
 volumes:
     postgres_data:
     minio_data:
+    redis_data:

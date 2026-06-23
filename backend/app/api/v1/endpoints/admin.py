@@ -24,7 +24,7 @@ from app.schemas.schemas import (
 )
 from app.services.admin import AdminService
 
-router = APIRouter(prefix="admin", tags=["Admin"])
+router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 # ─── GET /admin/users ─────────────────────────────────────────────────────────
