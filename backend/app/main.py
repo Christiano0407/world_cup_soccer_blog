@@ -88,6 +88,7 @@ def create_app() -> FastAPI:
   app.include_router(tournaments_router.router, prefix=API_V1_PREFIX)
   app.include_router(matches_router.router, prefix=API_V1_PREFIX)
   app.include_router(players_router.router, prefix=API_V1_PREFIX)
+  app.include_router(health_router.router)
   #app.include_router(analytic_router, prefix=API_V1_PREFIX)
 
   # Prometheus Metrics

@@ -175,7 +175,7 @@ class MockAdminService:
     async def get_etl_status(self, dataset: str | None = None) -> EtlStatusOut:
         return EtlStatusOut(status="success")
 
-    async def get_dead_letters(self, page: int = 1, page_size: int = 20, dataset: str | None = None, error_code: str | None = None) -> Paginated[DeadLetterOut]:
+    async def get_dead_letters(self, page: int = 1, page_size: int = 20, dataset: str | None = None, error_code: str | None = None, source_table: str | None = None) -> Paginated[DeadLetterOut]:
         return build_paginated([])
 
     async def refresh_warehouse(self) -> dict:
