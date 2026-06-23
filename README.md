@@ -43,8 +43,11 @@
 
     ┌──────────────────────────────────────────────────────────────────┐
     │  nginx (reverse proxy)                    host:8080 → cont:80   │
-    │  ├─ /api/* ──▶ backend (FastAPI)                               │
-    │  └─ /       ──▶ frontend                                       │
+    │  ├─ /api/*       ──▶ backend (FastAPI)                         │
+    │  ├─ /docs        ──▶ backend (Swagger UI)                      │
+    │  ├─ /redoc       ──▶ backend (ReDoc)                           │
+    │  ├─ /metrics     ──▶ backend (Prometheus)                      │
+    │  └─ /            ──▶ frontend                                   │
     └───────────────────────────────────────────┬──────────────────────┘
                                                 │
                                                 ▼
@@ -134,6 +137,17 @@
     │                          wc_players.csv                          │
     └──────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+### Redis — Caché y Rate Limiting
+
+El backend usa **Redis 7** para:
+- **Rate limiting**: Sliding-window counter por IP + endpoint (60 req/min público, 10 req/min auth)
+- **Refresh token blacklist**: `SETEX revoked_refresh:{jti} TTL` al hacer logout
+- **Caché** (futuro): TTL configurable via `CACHE_TTL_SECONDS`
+
+Redis no es requerido por los workers ETL — solo el backend depende de él.
 
 ---
 
@@ -254,11 +268,17 @@ docker compose up -d --build
 # Reconstruir forzando recreación de contenedores
 docker compose up -d --build --force-recreate
 
+# Ver logs del backend
+docker compose logs backend
+
 # Ver logs del worker (por service name)
 docker compose logs worker
 
 # Ver logs de un contenedor (por container name)
 docker logs fifa-workers
+
+# Ver logs de nginx
+docker compose logs nginx
 
 # Listar servicios activos
 docker compose ps
@@ -271,6 +291,10 @@ docker compose stop
 
 # Detener y eliminar volúmenes (borra TODOS los datos)
 docker compose down -v
+
+# Servicios disponibles: postgres | minio | minio-init | redis | worker | backend | nginx
+docker compose up -d postgres redis          # Solo infraestructura
+docker compose up -d backend                 # Solo backend (requiere postgres + redis)
 ```
 
 ### Pipeline ETL
@@ -285,7 +309,34 @@ fifa-worker --clean       # W2
 fifa-worker --load        # W3
 ```
 
-### Tests
+### Backend (FastAPI)
+
+```bash
+cd backend
+
+# Desarrollo local (recarga automática)
+uv run uvicorn app.main:create_app --factory --reload --port 8000
+
+# Producción local
+uv run uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000
+
+# Abrir en navegador
+open http://localhost:8000/docs
+```
+
+### Backend Dockerfile
+
+```dockerfile
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+WORKDIR /app
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
+COPY app/ ./app/
+EXPOSE 8000
+CMD ["uv", "run", "uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### Tests — Workers
 
 ```bash
 cd workers
@@ -301,6 +352,37 @@ uv run pytest -v --cov=worker
 
 # Lint + format
 uv run ruff check . && uv run ruff format .
+```
+
+### Tests — Backend
+
+```bash
+cd backend
+
+# Todos los tests (235 tests · 88% coverage)
+uv run pytest tests/ -v
+
+# Tests por capa
+uv run pytest tests/unit/security/ -v          # Seguridad (29 tests)
+uv run pytest tests/unit/schemas/ -v           # Schemas (14 tests)
+uv run pytest tests/unit/services/ -v          # Servicios (47 tests)
+
+# Tests API (TestClient con mocks)
+uv run pytest tests/test_auth_api.py -v        # Auth API (13 tests)
+uv run pytest tests/test_full_api.py -v        # Full API flow (19 tests)
+uv run pytest tests/test_security_and_sc.py -v # Security/SC (22 tests)
+
+# Test individual
+uv run pytest tests/unit/security/test_jwt.py -v
+
+# Con cobertura detallada
+uv run pytest tests/ -v --cov=app --cov-report=term-missing
+
+# Lint + format
+uv run ruff check app/ tests/ && uv run ruff format app/ tests/
+
+# Type check
+uv run mypy app/
 ```
 
 ---
@@ -350,9 +432,11 @@ docker compose exec postgres bash /docker-entrypoint-initdb.d/01-run_migrations.
 | Servicio | Host:Puerto | Propósito |
 |---|---|---|
 | PostgreSQL | `localhost:5434` | Base de datos ( :5432 dentro del contenedor) |
+| Redis | `localhost:6379` | Caché + rate limiting + refresh token revocation |
 | MinIO API | `localhost:9000` | Endpoint S3 |
 | MinIO Console | `localhost:9001` | Admin UI |
-| nginx | `localhost:8080` | Reverse proxy |
+| Backend API | `localhost:8000` | FastAPI (directo, sin nginx) |
+| nginx | `localhost:8080` | Reverse proxy (frontend + `/api/*` → backend) |
 
 ---
 
@@ -484,7 +568,7 @@ per-file-ignores = { "tests/**" = ["S101", "ANN201", "ANN001", "ANN202"] }
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                          TEST PIPELINE — BACKEND (FastAPI)                       │
-│                          165 tests · 0 failures · 68% coverage                   │
+│                          235 tests · 0 failures · 88% coverage                   │
 │                                                                                  │
 │  Capas de prueba (bottom-up):                                                    │
 │                                                                                  │
@@ -527,7 +611,22 @@ per-file-ignores = { "tests/**" = ["S101", "ANN201", "ANN001", "ANN202"] }
 │                                      │                                            │
 │                                      ▼                                            │
 │  ┌─────────────────────────────────────────────────────────────────────────────┐ │
-│  │  L0 — INFRAESTRUCTURA DE TEST  (tests/conftest.py + factories.py)          │ │
+│  │  L4 — API ENDPOINTS  (TestClient con mocks + override de dependencias)      │
+│                                                                             │
+│  tests/                                                                     │
+│  ├── test_auth_api.py           13 tests  (register, login, refresh,        │
+│  │                                          logout, me, patch,              │
+│  │                                          change-password, 422s)          │
+│  ├── test_full_api.py           19 tests  (flujo completo auth, teams,      │
+│  │                                          tournaments, matches, players,  │
+│  │                                          admin)                          │
+│  └── test_security_and_sc.py    22 tests  (health, status codes, 404, 422,  │
+│                                             security, negative scenarios)   │
+│                                                                             │
+│  └─────────────────────────────────────────────────────────────────────────┤ │
+│                                      │                                       │
+│                                      ▼                                       │
+│  L0 — INFRAESTRUCTURA DE TEST  (tests/conftest.py + factories.py)          │ │
 │  │                                                                             │ │
 │  │  conftest.py                                                                  │ │
 │  │  ├── MockResult       Simula SQLAlchemy Result (scalar_one_or_none,        │ │
@@ -574,6 +673,11 @@ uv run pytest tests/unit/services/ -v          # Servicios (47 tests)
 uv run pytest tests/unit/security/test_jwt.py -v
 uv run pytest tests/unit/services/test_auth_service.py -v
 
+# ── API endpoint tests (TestClient) ──────────────────────────────────
+uv run pytest tests/test_auth_api.py -v          # Auth API (13 tests)
+uv run pytest tests/test_full_api.py -v          # Full API flow (19 tests)
+uv run pytest tests/test_security_and_sc.py -v   # Security/SC (22 tests)
+
 # ── Con cobertura ────────────────────────────────────────────────────
 uv run pytest tests/ -v --cov=app --cov-report=term-missing
 
@@ -586,7 +690,7 @@ uv run mypy app/
 
 ```bash
 # Resultado actual:
-# 165 passed · 0 failed · 68% coverage (app core: 91-100%)
+# 235 passed · 0 failed · 88% coverage (app core: 91-100%)
 ```
 
 ---
@@ -708,22 +812,25 @@ if match_dt is None:
 │   │   ├── services/               # Business logic layer
 │   │   │   ├── auth.py             # Auth lifecycle (register, login, refresh, logout)
 │   │   │   ├── teams.py            # Team CRUD + stats + head-to-head
-│   │   │   ├── domain.py           # (pending)
-│   │   │   └── admin.py            # (pending)
-│   │   └── main.py                 # FastAPI entry point (pending)
+│   │   │   ├── domain_analytics.py # Tournament, Match, Player services
+│   │   │   └── admin.py            # Admin CRUD + ETL management
+│   │   └── main.py                 # FastAPI entry point (factory pattern)
 │   ├── openapi/                    # OpenAPI 3.1 spec
 │   │   ├── openapi.yaml
 │   │   ├── components/schemas/
 │   │   └── paths/
 │   ├── scripts/
-│   │   ├── seed.py                 # (pending)
-│   │   └── etl.py                  # (pending)
 │   ├── tests/
-│   │   ├── unit/                   # (pending)
-│   │   ├── integration/            # (pending)
-│   │   └── e2e/                    # (pending)
+│   │   ├── test_auth_api.py        # Auth API (13 tests)
+│   │   ├── test_full_api.py        # Full API flow (19 tests)
+│   │   ├── test_security_and_sc.py # Security + status codes (22 tests)
+│   │   ├── conftest.py             # Core test infrastructure
+│   │   ├── factories.py            # factory_boy factories
+│   │   ├── mocks.py                # Mock*Service classes
+│   │   ├── unit/                   # Service + security + schema tests (90 tests)
+│   │   └── integration/            # (pending)
 │   ├── pyproject.toml
-│   └── Dockerfile                  # (pending)
+│   └── Dockerfile                  # uv:bookworm-slim
 │
 ├── workers/                        # ETL Pipeline
 │   ├── pyproject.toml
@@ -987,30 +1094,36 @@ Estado actual de cada componente del backend:
 
 | Componente | Estado | Archivo(s) |
 |------------|--------|------------|
-| `main.py` — App FastAPI entry point | 🔴 Pendiente (bloqueante) | `app/main.py` |
-| Health endpoint | 🔴 Sin implementar | `app/api/v1/endpoints/health.py` |
-| Auth endpoints | 🟡 Escritos, sin conectar | `app/api/v1/endpoints/auth.py` |
+| `main.py` — App FastAPI entry point | 🟢 Implementado | `app/main.py` |
+| Health endpoint | 🟢 Implementado + registrado | `app/api/v1/endpoints/health.py` |
+| Auth endpoints | 🟢 Implementados + conectados | `app/api/v1/endpoints/auth.py` |
 | Teams endpoints | 🟢 Implementados + corregidos | `app/api/v1/endpoints/teams.py` |
 | Tournaments endpoints | 🟢 Implementados + corregidos | `app/api/v1/endpoints/tournaments.py` |
 | Matches endpoints | 🟢 Implementados + corregidos | `app/api/v1/endpoints/matches.py` |
 | Players endpoints | 🟢 Implementados + corregidos | `app/api/v1/endpoints/players.py` |
-| Admin endpoints | 🟢 Implementados + corregidos | `app/api/v1/endpoints/admin.py` |
+| Admin endpoints | 🟢 Implementados + conectados | `app/api/v1/endpoints/admin.py` |
 | Analytics endpoints | 🔴 Sin implementar | `app/api/v1/endpoints/analytics.py` |
 | Auth service | 🟢 Implementado + corregido | `app/services/auth.py` |
 | Teams service | 🟢 Implementado + optimizado | `app/services/teams.py` |
 | Domain service | 🔴 Sin implementar | `app/services/domain.py` |
-| Admin service | 🔴 Sin implementar | `app/services/admin.py` |
+| Admin service | 🟢 Implementado | `app/services/admin.py` |
+| Tournament service | 🟢 Implementado | `app/services/domain_analytics.py` |
+| Match service | 🟢 Implementado | `app/services/domain_analytics.py` |
+| Player service | 🟢 Implementado | `app/services/domain_analytics.py` |
 | OpenAPI schemas (YAML) | 🟢 Sincronizados con Python | `openapi/components/schemas/*.yaml` |
-| `__init__.py` exports | 🔴 Pendiente | Todos los `__init__.py` |
-| Dockerfile | 🔴 Pendiente | `backend/Dockerfile` |
-| `docker-compose.yml` — backend service | 🔴 Pendiente | `docker-compose.yml` |
+| Dockerfile | 🟢 Creado (uv:bookworm-slim) | `backend/Dockerfile` |
+| `docker-compose.yml` — backend + redis | 🟢 Añadidos | `docker-compose.yml` |
+| nginx proxy_pass `/api/*` → backend | 🟢 Activado | `infra/nginx/conf.d/api-gateway.conf` |
 | Alembic + migrations | 🔴 Pendiente | `alembic.ini` |
-| `scripts/seed.py` / `etl.py` | 🔴 Pendiente | `backend/scripts/` |
-| Unit tests | 🔴 Pendiente | `backend/tests/unit/` |
-| Integration tests | 🔴 Pendiente | `backend/tests/integration/` |
-| E2E tests | 🔴 Pendiente | `backend/tests/e2e/` |
-| E2E tests | **Media** | `backend/tests/e2e/` |
-| CI/CD workflows | **Media** | `.github/workflows/` |
+| Rate limiting + Prometheus | 🟢 Integrados en app | `app/main.py` |
+| API tests (TestClient) | 🟢 54 tests | `tests/test_auth_api.py` |
+| Full API flow tests | 🟢 19 tests | `tests/test_full_api.py` |
+| Security + Status Code tests | 🟢 22 tests | `tests/test_security_and_sc.py` |
+| Unit tests (services) | 🟢 47 tests | `tests/unit/services/` |
+| Unit tests (security) | 🟢 29 tests | `tests/unit/security/` |
+| Unit tests (schemas) | 🟢 14 tests | `tests/unit/schemas/` |
+| Integration tests | 🔴 Pendiente | `tests/integration/` |
+| CI/CD workflows | 🔴 Pendiente | `.github/workflows/` |
 
 ### Workers ETL (✅ Completado)
 
@@ -1036,39 +1149,39 @@ Estado actual de cada componente del backend:
 - [x] Especificación OpenAPI completa
 - [x] Core backend (config, security, DB session, ORM, schemas, middleware)
 
-### Fase 2 — API REST ⏳
-- [ ] `main.py` — App FastAPI + registro de routers/middleware/exception handlers (bloqueante)
-- [ ] Endpoints de Health + Auth (register, login, refresh, logout, me)
-- [x] Endpoints de Teams, Tournaments, Matches, Players (implementados, esperando `main.py`)
-- [ ] Endpoints de Analytics
-- [x] Endpoints de Admin (CRUD usuarios, trigger ETL) (implementados, esperando `main.py`)
-- [x] Servicios (auth, teams implementados)
-- [ ] Servicios (domain, admin pendientes)
+### Fase 2 — API REST ✅
+- [x] `main.py` — App FastAPI + registro de routers/middleware/exception handlers
+- [x] Endpoints de Health + Auth (register, login, refresh, logout, me)
+- [x] Endpoints de Teams, Tournaments, Matches, Players
+- [ ] Endpoints de Analytics (pendiente)
+- [x] Endpoints de Admin (CRUD usuarios, trigger ETL)
+- [x] Servicios (auth, teams, domain_analytics, admin)
 - [x] Bug fixes y refactoring realizados
 - [x] Schemas OpenAPI sincronizados con Python
-- [ ] `__init__.py` con exports
+- [x] Prefix `/admin` corregido (faltaba `/`)
 
-### Fase 3 — Infraestructura 🏗️
-- [ ] Dockerfile para backend
-- [ ] Servicio backend en `docker-compose.yml`
-- [ ] Alembic para migraciones desde Python
-- [ ] Scripts `seed.py` y `etl.py`
-- [ ] `.env.example` completo para backend
+### Fase 3 — Infraestructura ✅
+- [x] Dockerfile para backend (uv:bookworm-slim)
+- [x] Servicio backend + Redis en `docker-compose.yml`
+- [x] nginx proxy_pass activo para `/api/*`, `/docs`, `/metrics`
+- [ ] Alembic para migraciones desde Python (pendiente)
+- [ ] Scripts `seed.py` y `etl.py` (pendiente)
 
 ### Fase 4 — Calidad y CI/CD 🧪
-- [ ] Tests unitarios del backend
-- [ ] Tests de integración del backend
-- [ ] Tests E2E
-- [ ] GitHub Actions (lint + test + build)
-- [ ] Docker Compose healthchecks completos
+- [x] Tests unitarios del backend (90 tests, services + security + schemas)
+- [x] Tests API con TestClient (54 tests, 3 archivos)
+- [x] **235 tests total · 0 failures · 88% coverage**
+- [ ] Tests de integración del backend (pendiente)
+- [ ] Tests E2E (pendiente)
+- [ ] GitHub Actions (lint + test + build) (pendiente)
 
 ### Fase 5 — Producción 🚀
 - [ ] HTTPS / TLS (certbot / Let's Encrypt)
-- [ ] Rate limiting con Redis (ya implementado, falta registro en app)
-- [ ] OpenTelemetry / Prometheus metrics
-- [ ] CSRF protection
-- [ ] Backups automatizados de DB
-- [ ] Logs centralizados
+- [x] Rate limiting con Redis (registrado en app)
+- [x] Prometheus metrics endpoint (`/metrics`)
+- [ ] CSRF protection (pendiente)
+- [ ] Backups automatizados de DB (pendiente)
+- [ ] Logs centralizados (pendiente)
 
 ---
 
