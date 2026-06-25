@@ -36,7 +36,7 @@ CSR + Vite + React 19 + TypeScript + TailwindCSS v4 + TanStack Query
 | Bundler | Vite 8 |
 | Estilos | TailwindCSS v4 (vite plugin) |
 | Data Fetching | TanStack Query v5 |
-| HTTP Client | Axios |
+| HTTP Client | Fetch nativo |
 | Routing | React Router DOM v7 |
 | Animaciones | GSAP |
 | Linting | ESLint + typescript-eslint |
@@ -65,7 +65,7 @@ pnpm create vite . --template react-ts
 
 ```bash
 # Producción
-pnpm add @tanstack/react-query react-router-dom axios
+pnpm add @tanstack/react-query react-router-dom
 
 # Desarrollo
 pnpm add -D tailwindcss @tailwindcss/vite gsap typescript typescript-eslint
@@ -98,7 +98,7 @@ pnpm add -D tailwindcss @tailwindcss/vite gsap typescript typescript-eslint
 frontend/src/
 ├── api/
 │   ├── types.ts        # Interfaces TS (Team, Match, Tournament, etc.)
-│   └── client.ts       # Axios client con endpoints
+│   └── client.ts       # fetch wrapper con endpoints
 ├── hooks/
 │   ├── useTeams.ts     # useQuery teams, team detail, ranking
 │   ├── useMatches.ts   # useQuery matches, match detail
@@ -185,9 +185,19 @@ El proxy de Vite redirige `/api/*` → `backend:8000` (ver `vite.config.ts`).
 
 ---
 
+## Historial de cambios
+
+| Fecha | Cambio |
+|-------|--------|
+| 2026-06-25 | Se eliminó `axios` por seguridad (supply chain attack). Se migró a **fetch nativo**. |
+
+---
+
 ## Notas
 
 - **Ancho del build**: ~257 KB JS + ~7 KB CSS (gzip: ~82 KB total)
 - **Tailwind v4** no necesita `tailwind.config.ts` ni `postcss.config.js`. Usa `@import "tailwindcss"` en CSS y el plugin `@tailwindcss/vite` en Vite.
 - **TypeScript 6.0.3** instalado. Usar `tsc --noEmit` para type-check.
+- **Fetch nativo** reemplazó a axios (abril 2025 — supply chain attack). Sin dependencias HTTP externas. Fácil migrar a `ky` después si se necesita timeout/retry.
 - El `Dockerfile` y `docker-compose.yml` están en skeleton — completar antes de deploy.
+- Para migrar a `ky` después: `pnpm add ky` y cambiar solo `api/client.ts`.
