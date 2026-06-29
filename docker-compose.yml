@@ -143,6 +143,17 @@ services:
       - data_world_network
     restart: unless-stopped
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: data_world_frontend
+    networks:
+      - data_world_network
+    depends_on:
+      backend:
+        condition: service_started
+
   nginx:
     build:
       context: ./infra/nginx
@@ -152,6 +163,8 @@ services:
       - "8080:80"
     depends_on:
       backend:
+        condition: service_started
+      frontend:
         condition: service_started
     networks:
       - data_world_network
