@@ -1064,6 +1064,372 @@ Los archivos YAML en `openapi/components/schemas/` fueron corregidos para reflej
 
 ---
 
+## Análisis del Proyecto — 6 Procesos
+
+```
+                    ┌─────────────────────────────────────────────────────────┐
+                    │                  world_cup_soccer_blog                   │
+                    │           Monorepo — pnpm workspace                     │
+                    └─────────────────────────────────────────────────────────┘
+                                      │
+        ┌─────────────────┬──────────┼──────────┬─────────────────┬──────────┐
+        ▼                 ▼          ▼          ▼                 ▼          ▼
+  ① DB             ② Storage    ③ Workers  ④ Backend   ⑤ Gateway     ⑥ Frontend
+  PostgreSQL       MinIO        ETL (CSV)  FastAPI      Nginx          React + TS
+  Port 5434        Ports        Python     Port 8000    Port 8080      Port 5173
+  (host:5432)      9000/9001    uv run     JWT Auth     Proxy API      CSR + TanStack
+                                                      SPA fallback
+```
+
+| Proceso | Tecnología | Rol en el sistema | Conexión con Frontend |
+|---------|-----------|-------------------|----------------------|
+| **① DB** | PostgreSQL 15 | Almacena datos históricos de mundiales (equipos, partidos, torneos, jugadores, usuarios) | El frontend nunca accede directo; todo viaja por la API |
+| **② Storage** | MinIO | Almacena CSVs, imágenes, datos procesados por workers | No hay acceso directo desde frontend |
+| **③ Workers** | Python (uv) | ETL: ingesta de CSVs → PostgreSQL + MinIO | No interactúa con frontend |
+| **④ Backend** | FastAPI (Python) | API REST con JWT auth, rate limiting (60 req/min), Prometheus, OpenAPI docs | **Endpoint principal del frontend** — todas las llamadas van aquí |
+| **⑤ Gateway** | Nginx | Reverse proxy: rutas `/api/*` → backend, `/` → frontend SPA | Punto de entrada único en producción (`:8080`) |
+| **⑥ Frontend** | React 19 + Vite 8 | CSR — TanStack Query consulta la API y renderiza datos | Proyecto frontend (`frontend/`) |
+
+### Flujo de Datos Extremo a Extremo
+
+```
+          Navegador
+              │
+              ▼
+    fetch('/api/v1/teams/')
+              │
+     ┌────────┴────────┐
+     ▼                  ▼
+Dev (5173)          Prod (8080)
+Vite Proxy          Nginx Proxy
+     │                  │
+     └──────┬───────────┘
+            ▼
+    backend:8000
+    (FastAPI)
+            │
+            ▼
+    Service Layer
+            │
+            ▼
+    SQLAlchemy ORM
+            │
+            ▼
+    PostgreSQL
+```
+
+---
+
+## Pipeline Maestro — Conexión Frontend → Backend (6 Fases)
+
+La conexión entre el frontend (React + Vite) y el backend (FastAPI) sigue una arquitectura CSR con TanStack Query. El frontend nunca se conecta directamente a PostgreSQL ni a MinIO — todo pasa por la API REST.
+
+### Fase 0 — Catálogo Completo de Endpoints
+
+Todos los endpoints que el frontend puede consumir. Los endpoints públicos no requieren autenticación.
+
+| Endpoint | Método | Auth | Params | Respuesta |
+|----------|--------|------|--------|-----------|
+| `GET /api/v1/teams/` | GET | — | `active`, `confederation` | `Team[]` |
+| `GET /api/v1/teams/ranking` | GET | — | — | `Team[]` |
+| `GET /api/v1/teams/{initials}` | GET | — | — | `Team + TeamStats` |
+| `GET /api/v1/teams/{initials}/matches` | GET | — | `page`, `page_size`, `stage`, `year` | `Paginated<Match>` |
+| `GET /api/v1/teams/{initials}/head-to-head/{opponent}` | GET | — | — | `HeadToHead` |
+| `GET /api/v1/matches/` | GET | — | `page`, `page_size`, `team`, `year`, `stage` | `Paginated<Match>` |
+| `GET /api/v1/matches/{id}` | GET | — | — | `Match` |
+| `GET /api/v1/matches/{id}/players` | GET | — | — | `PlayerAppearance[]` |
+| `GET /api/v1/tournaments/` | GET | — | `page`, `page_size` | `Paginated<Tournament>` |
+| `GET /api/v1/tournaments/{year}` | GET | — | — | `Tournament` |
+| `GET /api/v1/tournaments/{year}/matches` | GET | — | `page`, `page_size` | `Paginated<Match>` |
+| `GET /api/v1/tournaments/{year}/teams` | GET | — | — | `Team[]` |
+| `GET /api/v1/tournaments/{year}/top-scorers` | GET | — | — | `TopScorer[]` |
+| `GET /api/v1/players/search` | GET | — | `q` | `PlayerAppearance[]` |
+| `GET /api/v1/players/top-scorers` | GET | — | — | `TopScorer[]` |
+| `GET /api/v1/players/{name}/career` | GET | — | — | `PlayerCareer` |
+| `POST /api/v1/auth/register` | POST | — | `RegisterIn` body | `TokenOut` |
+| `POST /api/v1/auth/login` | POST | — | `LoginIn` body | `TokenOut` |
+| `POST /api/v1/auth/refresh` | POST | Cookie | — | `TokenOut` |
+| `POST /api/v1/auth/logout` | POST | Bearer | — | `void` |
+| `GET /api/v1/auth/me` | GET | Bearer | — | `UserOut` |
+| `PATCH /api/v1/auth/me` | PATCH | Bearer | `UserUpdateIn` body | `UserOut` |
+| `POST /api/v1/auth/change-password` | POST | Bearer | `ChangePasswordIn` body | `void` |
+
+---
+
+### Fase 1 — Contrato TypeScript (src/api/types.ts)
+
+Cada schema del backend se mapea a una interfaz TypeScript. Este archivo es el **contrato** entre frontend y backend.
+
+```typescript
+// = Equipos = //
+interface Team {
+  team_id: number; initials: string; name: string;
+  confederation: string; fifa_code: string; active: boolean;
+}
+
+interface TeamStats {
+  tournaments_played: number; titles: number; wins: number;
+  draws: number; losses: number; goals_for: number;
+  goals_against: number; win_rate: number; points: number;
+}
+
+interface HeadToHead {
+  team1_initials: string; team2_initials: string;
+  team1_wins: number; team2_wins: number;
+  draws: number; total_matches: number;
+}
+
+// = Partidos = //
+interface Match {
+  match_id: number; tournament_year: number; stage: string;
+  date: string; team1_initials: string; team2_initials: string;
+  team1_name: string; team2_name: string;
+  team1_goals: number; team2_goals: number;
+  team1_penalties?: number; team2_penalties?: number;
+  stadium: string; city: string; referee: string; attendance?: number;
+}
+
+// = Torneos = //
+interface Tournament {
+  year: number; host_country: string; winner: string;
+  runners_up: string; third_place: string; fourth_place: string;
+  goals_scored: number; matches_played: number;
+  attendance: number; start_date: string; end_date: string;
+}
+
+// = Jugadores = //
+interface PlayerAppearance {
+  player_match_id: number; match_id: number; team_initials: string;
+  player_name: string; position: string;
+  event_code: string | null; shirt_number: number;
+}
+
+interface TopScorer {
+  player_name: string; goals: number; own_goals: number;
+  matches_played: number; editions: number[];
+}
+
+interface PlayerCareer {
+  player_name: string; appearances: number; starts: number;
+  substitutions: number; goals: number;
+  yellow_cards: number; red_cards: number; editions: number[];
+}
+
+// = Genéricos = //
+interface Paginated<T> { items: T[]; total: number; page: number; page_size: number; pages: number; }
+
+// = Autenticación = //
+interface LoginIn { email: string; password: string; }
+interface RegisterIn { email: string; password: string; display_name: string; }
+interface TokenOut { access_token: string; token_type: string; expires_in: number; }
+interface UserOut {
+  user_id: number; email: string; display_name: string;
+  role: 'admin' | 'editor' | 'reader'; is_active: boolean;
+  created_at: string; updated_at: string;
+}
+```
+
+---
+
+### Fase 2 — Fetch Wrapper Nativo (src/api/client.ts)
+
+El wrapper usa **fetch nativo** (sin axios — eliminado por seguridad ante supply chain attack). La URL relativa `/api/v1/...` funciona en desarrollo (Vite proxy) y producción (Nginx).
+
+**Comportamiento interno:**
+1. URL relativa: todas las rutas empiezan con `/api/v1/...`
+2. Token JWT: se lee de `localStorage` y se inyecta como `Authorization: Bearer <token>`
+3. Error 401: si el backend rechaza el token, se limpia `localStorage`
+4. Parseo JSON: cada respuesta se tipa con las interfaces TypeScript
+
+| Operación | Firma | Endpoint |
+|-----------|-------|----------|
+| Listar equipos | `listTeams(params?)` | `GET /api/v1/teams/` |
+| Detalle equipo | `getTeam(initials)` | `GET /api/v1/teams/{initials}` |
+| Partidos equipo | `getTeamMatches(initials, params?)` | `GET /api/v1/teams/{initials}/matches` |
+| Head-to-head | `getHeadToHead(t1, t2)` | `GET /api/v1/teams/{t1}/head-to-head/{t2}` |
+| Ranking | `getRanking()` | `GET /api/v1/teams/ranking` |
+| Listar partidos | `listMatches(params?)` | `GET /api/v1/matches/` |
+| Detalle partido | `getMatch(id)` | `GET /api/v1/matches/{id}` |
+| Alineación | `getMatchPlayers(id)` | `GET /api/v1/matches/{id}/players` |
+| Listar torneos | `listTournaments(params?)` | `GET /api/v1/tournaments/` |
+| Detalle torneo | `getTournament(year)` | `GET /api/v1/tournaments/{year}` |
+| Partidos torneo | `getTournamentMatches(year, params?)` | `GET /api/v1/tournaments/{year}/matches` |
+| Equipos torneo | `getTournamentTeams(year)` | `GET /api/v1/tournaments/{year}/teams` |
+| Goleadores torneo | `getTournamentTopScorers(year)` | `GET /api/v1/tournaments/{year}/top-scorers` |
+| Buscar jugadores | `searchPlayers(q)` | `GET /api/v1/players/search` |
+| Goleadores históricos | `getTopScorers()` | `GET /api/v1/players/top-scorers` |
+| Carrera jugador | `getPlayerCareer(name)` | `GET /api/v1/players/{name}/career` |
+| Login | `login(data)` | `POST /api/v1/auth/login` |
+| Registro | `register(data)` | `POST /api/v1/auth/register` |
+| Logout | `logout()` | `POST /api/v1/auth/logout` |
+| Perfil | `getMe()` | `GET /api/v1/auth/me` |
+
+---
+
+### Fase 3 — TanStack Query Hooks (src/hooks/)
+
+Cada hook envuelve una llamada del client y expone `data`, `isLoading`, `error`. Ninguna Page importa `client.ts` directamente — siempre a través de hooks.
+
+```
+Componente React → useTeams() → client.listTeams() → fetch('/api/v1/teams/')
+                                                         │
+                                                    Vite/Nginx proxy
+                                                         │
+                                                    backend:8000
+```
+
+| Hook | Tipo | Query Key | Endpoint |
+|------|------|-----------|----------|
+| `useTeams(params?)` | `useQuery` | `['teams', params]` | `GET /api/v1/teams/` |
+| `useTeam(initials)` | `useQuery` | `['team', initials]` | `GET /api/v1/teams/{initials}` |
+| `useTeamMatches(initials, page?)` | `useQuery` | `['teamMatches', initials, page]` | `GET /api/v1/teams/{initials}/matches` |
+| `useHeadToHead(t1, t2)` | `useQuery` | `['headToHead', t1, t2]` | `GET /api/v1/teams/{t1}/head-to-head/{t2}` |
+| `useRanking()` | `useQuery` | `['ranking']` | `GET /api/v1/teams/ranking` |
+| `useMatches(params?)` | `useQuery` | `['matches', params]` | `GET /api/v1/matches/` |
+| `useMatch(id)` | `useQuery` | `['match', id]` | `GET /api/v1/matches/{id}` |
+| `useMatchPlayers(id)` | `useQuery` | `['matchPlayers', id]` | `GET /api/v1/matches/{id}/players` |
+| `useTournaments(page?)` | `useQuery` | `['tournaments', page]` | `GET /api/v1/tournaments/` |
+| `useTournament(year)` | `useQuery` | `['tournament', year]` | `GET /api/v1/tournaments/{year}` |
+| `useTournamentMatches(year, page?)` | `useQuery` | `['tournamentMatches', year, page]` | `GET /api/v1/tournaments/{year}/matches` |
+| `useTournamentTeams(year)` | `useQuery` | `['tournamentTeams', year]` | `GET /api/v1/tournaments/{year}/teams` |
+| `useTournamentTopScorers(year)` | `useQuery` | `['tournamentTopScorers', year]` | `GET /api/v1/tournaments/{year}/top-scorers` |
+| `useMe()` | `useQuery` | `['me']` | `GET /api/v1/auth/me` |
+| `useLogin()` | `useMutation` | — | `POST /api/v1/auth/login` |
+| `useRegister()` | `useMutation` | — | `POST /api/v1/auth/register` |
+| `useLogout()` | `useMutation` | — | `POST /api/v1/auth/logout` |
+
+---
+
+### Fase 4 — Autenticación (Auth Flow)
+
+```
+┌─────────┐     POST /api/v1/auth/login      ┌──────────────┐
+│ Login   │ ────────────────────────────────→ │  Backend     │
+│ Page    │                                   │  FastAPI     │
+│         │ ←──────────────────────────────── │              │
+└─────────┘     { access_token, expires_in }  └──────────────┘
+                      │
+                      ▼
+               localStorage.setItem('token', access_token)
+                      │
+                      ▼
+               useMe() se ejecuta automáticamente
+                      │
+                      ▼
+               Navbar muestra sesión activa
+```
+
+Request autenticado:
+```
+fetch('/api/v1/auth/me', {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`
+  }
+})
+  ├── ✅ 200 → UserOut (datos del usuario)
+  └── ❌ 401 → localStorage.removeItem('token')
+               → useMe() se desactiva
+               → UI muestra botón "Login"
+```
+
+---
+
+### Fase 5 — Mapa de Dependencias entre Capas
+
+```
+src/api/types.ts         ← Contrato: interfaces TS (basado en schemas del backend)
+     ↑
+src/api/client.ts        ← Fetch wrapper: 20 operaciones, tipado fuerte, token JWT automático
+     ↑
+src/hooks/use*.ts        ← TanStack Query: caching, loading/error/success states, 17 hooks
+     ↑
+src/pages/*.tsx          ← UI：consume hooks, renderiza con Tailwind, maneja estados
+     ↑
+src/components/*.tsx     ← Componentes reutilizables: Card, ScoreDisplay, Badge, Loading
+```
+
+**Regla**: Una Page NUNCA importa `client.ts`. Siempre vía hooks. Esto permite cambiar fetch → ky → axios sin tocar UI.
+
+---
+
+### Fase 6 — Comandos de Conexión y Verificación
+
+```bash
+# ========================================
+# ENTORNO DE DESARROLLO
+# ========================================
+
+# 1. Iniciar infraestructura (DB + backend)
+docker compose up -d postgres redis backend
+
+# 2. Verificar que el backend responde directamente
+curl http://localhost:8000/api/v1/teams/ | python3 -m json.tool
+
+# 3. Iniciar frontend en modo dev
+cd frontend && pnpm dev
+
+# 4. Probar conexión vía Vite proxy (simula frontend→backend)
+curl http://localhost:5173/api/v1/teams/ | python3 -m json.tool
+# → Vite proxy → backend:8000 → PostgreSQL → JSON
+
+# ========================================
+# ENTORNO DE PRODUCCIÓN (Docker Compose)
+# ========================================
+
+# 5. Construir y levantar todos los servicios
+docker compose build frontend
+docker compose up -d
+
+# 6. Verificar conexión vía Nginx gateway (punto de entrada único)
+curl http://localhost:8080/api/v1/teams/ | python3 -m json.tool
+# → Nginx → backend:8000 → PostgreSQL → JSON
+
+# 7. Verificar que el frontend SPA se sirve correctamente
+curl -s http://localhost:8080/ | head -5
+# → <!DOCTYPE html><html>... (SPA servida por frontend)
+
+# ========================================
+# FLUJO COMPLETO: AUTH → DATOS
+# ========================================
+
+# 8. Registrar un usuario
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Test123!","display_name":"Test"}'
+
+# 9. Login y extraer token
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Test123!"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+# 10. Usar token para endpoint protegido
+curl -s http://localhost:8080/api/v1/auth/me \
+  -H "Authorization: Bearer $TOKEN"
+
+# 11. Probar un head-to-head entre dos equipos
+curl -s "http://localhost:8080/api/v1/teams/BRA/head-to-head/ARG"
+```
+
+---
+
+## Stack Tecnológico del Frontend
+
+| Capa | Tecnología | Versión |
+|------|-----------|---------|
+| Framework | React | 19.2.7 |
+| Lenguaje | TypeScript | 6.0.3 |
+| Bundler | Vite | 8.1.0 |
+| Estilos | TailwindCSS | 4.3.1 |
+| Data Fetching | TanStack Query | 5.101.1 |
+| HTTP Client | Fetch nativo (sin axios) | — |
+| Routing | React Router DOM | 7.18.0 |
+| Animaciones | GSAP | 3.15.0 |
+| Linting | ESLint + typescript-eslint | 8.62.0 |
+| Gestor | pnpm | 10.30.3 |
+
+---
+
 ## Implementation Status
 
 Estado actual de cada componente del backend:
